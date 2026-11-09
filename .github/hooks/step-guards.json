@@ -1,0 +1,24 @@
+{
+  "hooks": {
+    "SessionStart": [
+      { "type": "command", "bash": "node .github/scripts/step-guard.mjs SessionStart",
+        "powershell": "node .github/scripts/step-guard.mjs SessionStart", "timeout": 15 }
+    ],
+    "UserPromptSubmit": [
+      { "type": "command", "bash": "node .github/scripts/step-guard.mjs UserPromptSubmit",
+        "powershell": "node .github/scripts/step-guard.mjs UserPromptSubmit", "timeout": 15 }
+    ],
+    "PreToolUse": [
+      { "type": "command", "bash": "node .github/scripts/step-guard.mjs PreToolUse",
+        "powershell": "node .github/scripts/step-guard.mjs PreToolUse", "timeout": 15 }
+    ],
+    "PostToolUse": [
+      { "type": "command", "bash": "node .github/scripts/step-guard.mjs PostToolUse",
+        "powershell": "node .github/scripts/step-guard.mjs PostToolUse", "timeout": 15 }
+    ],
+    "Stop": [
+      { "type": "command", "bash": "node .github/scripts/step-guard.mjs Stop",
+        "powershell": "node .github/scripts/step-guard.mjs Stop", "timeout": 15 }
+    ]
+  }
+}

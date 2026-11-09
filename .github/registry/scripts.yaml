@@ -1,0 +1,528 @@
+# Register of every script in .github/scripts/: its disposition, its command's arguments (`args`), what it is for (`purpose`), who runs it (`who`), and what it reads and writes.
+# Dispositions: operator (drives a run), generator (writes a generated file), harness (tests the build, never on the operator page), library (imported by other scripts, never run on its own), hook (VS Code runs it during an agent's turn).
+# Read by operator.mjs, which builds the operator page .github/OPERATING-A-RUN.md from it, and by advance.mjs, which runs each script carrying `stage: <n>` once that stage has produced.
+# Edited by hand when a script is added, removed or changes what it takes, reads or writes; no script writes it.
+# Checked by the build: C144 (register and scripts on disk agree both ways, the operator page matches its generator) and C155 (every script a task runs is registered, and a task runs every operator script).
+
+scripts:
+  - path: .github/scripts/advance.mjs
+    disposition: operator
+    args: "[run_id] [--approve --by <name> --role <role> --answers <verdicts> --asked <answer>] [--waits]"
+    purpose: "Makes every mechanical move between one human decision and the next on the open run (moves the stage, runs the stage's scripts, runs and records the quality gate, accepts or stops) and names whose decision is owed; with `--approve` it records the person's approval in their name, and `--waits` only prints what the stage waits on from a person."
+    who: "A person through `SPOCK: continue` and `SPOCK: approve what is in front of me`; the agent through `SPOCK: check what is written, then continue`; and the person's decision tasks (`SPOCK: record a decision I made`, `SPOCK: replace a decision that no longer stands`) run `advance.mjs --waits` after their own step."
+    reads: "RUN-STATE.md, the run's documents, the workflow contracts and gate tables, the agent and skill registers, and the script register (for the scripts a stage runs)."
+    writes: "Nothing itself. Every write goes through the scripts it runs: `run-state.mjs` (stage moves, decisions, approvals, answers, the record and the front page), `check.mjs --record` (the gate verdict) and each script registered for the stage."
+  - path: .github/scripts/run-state.mjs
+    disposition: operator
+    args: "<init|stage|gate|supplied-market|judged|agree|seen|decide|correct-name|retract|unread|read|stale|accept-stale|abandon|jira> <run_id> [<stage>] [options]"
+    purpose: "The single writer of a run's record: it starts a run and records each stage move, gate result, decision, sign-off, agreement, correction and stop."
+    who: "The workflow (`advance.mjs`, `check.mjs --record`, `keep.mjs` and `market-material.mjs` call it); a person through 11 tasks, among them `SPOCK: replace a decision that no longer stands`, `SPOCK: correct a name on the record`, `SPOCK: record who owns this stage`, `SPOCK: start a run` and `SPOCK: move a stage`; a person or the agent through `SPOCK: record a body this stage could not read` and `SPOCK: record what I had to read`."
+    reads: "The run's RUN-STATE.md, its documents and its records, and `.github/build` (the build a new run records)."
+    writes: "RUN-STATE.md and the run's front page (README.md) on every change; on `init`, the run folder with its stage and supplied folders and `sources.md`; the decision block in the front matter of the document a decision rides on; on `agree`, the agreed PRD written from the draft. A document it replaces is moved to the run's `superseded/` folder."
+  - path: .github/scripts/check.mjs
+    disposition: operator
+    args: "[{runs_root}/<run_id>] [--gate Q<n>] [--gates] [--document <code>] [--record --by <runner>]"
+    purpose: "Runs the quality checks over one run's documents and record and reports, gate by gate, which pass, which fail and what passing looks like."
+    who: "The workflow itself: `advance.mjs` runs it to record each stage's quality gate, and `explain.mjs` and `written.mjs` run it without recording. The agent or a person also runs it through `SPOCK: run one gate`, and a person through `SPOCK: check the whole run` and `SPOCK: which gates can run in full`."
+    reads: "The run folder (RUN-STATE.md, every document, its records and parts, the supplied folders and what was taken back) and the workflow's own registries (gate lists, passing shapes, the compliance area cards, the egress and fixture registers, the release's file list)."
+    writes: "Nothing by itself. With `--record`, it has `run-state.mjs` write the gate's verdict, and the checks that failed, onto RUN-STATE.md."
+  - path: .github/scripts/explain.mjs
+    disposition: operator
+    args: "[{runs_root}/<run_id>] [--gate Q<n>]"
+    purpose: "Prints, for each check the open stage's gate fails now, what failed, what the check is for and why from its card in COVERAGE-CHECKS.md, what passes and what to do, and its section in the stage's shapes body where it has one, grouped by the document each failure is about."
+    who: "A person or the agent through `SPOCK: explain what the gate failed`."
+    reads: "The gate's machine view (it runs `check.mjs --gate Q<n> --findings` without recording), `.github/COVERAGE-CHECKS.md`, `.github/registry/shapes.yaml`, the stage's shapes body under `.github/know-how/product/` and `.vscode/tasks.json`."
+    writes: "Nothing."
+  - path: .github/scripts/card-join.mjs
+    disposition: operator
+    stage: 3
+    args: "[{runs_root}/<run_id>] --write"
+    purpose: "Assembles stage 3's competitor cards document from the card parts word for word, so the join cannot mistranscribe; without `--write` it reports how the document differs from its parts."
+    who: "The workflow: `advance.mjs` runs it once stage 3 has produced; a person or the agent through `SPOCK: stage 3 — join the cards, then the store`."
+    reads: "The run's `3-competitive-analysis/parts/` card files and its competitor cards document."
+    writes: "With `--write`, the card region of `3-competitive-analysis/2-competitor-cards.md`."
+  - path: .github/scripts/derive.mjs
+    disposition: operator
+    stage: 4
+    args: "[{runs_root}/<run_id>] --write"
+    purpose: "Turns each stage 4 solution's answers to the compliance area cards' questions into the compliance section a person reads, printing every fired touchpoint as its card wrote it; without `--write` it reports what it would write."
+    who: "The workflow: `advance.mjs` runs it once stage 4 has produced; a person or the agent through `SPOCK: stage 4 — derive the compliance sections`."
+    reads: "The run's stage 4 solution parts and their answers, the area cards under `.github/know-how/compliance/`, `.github/registry/regmap.yaml` and `.github/registry/screening-inputs.yaml`."
+    writes: "With `--write`, one `parts/<id>.compliance.md` per solution in the run's `4-solutions/` folder."
+  - path: .github/scripts/solution-join.mjs
+    disposition: operator
+    stage: 4
+    args: "[{runs_root}/<run_id>] --write"
+    purpose: "Assembles stage 4's solution set from its parts word for word behind one index table, and writes the selected solution from the person's recorded choice; without `--write` it reports the difference."
+    who: "The workflow: `advance.mjs` runs it once stage 4 has produced; a person or the agent through `SPOCK: stage 4 — assemble the solution set`."
+    reads: "The run's `4-solutions/parts/` files, the slate, the compliance sections `derive.mjs` wrote, and RUN-STATE.md (for the recorded choice)."
+    writes: "With `--write`, `4-solutions/1-solution-set.md`, and `4-solutions/2-selected-solution.md` where a choice is recorded; a selected solution it replaces is moved to the run's `superseded/` folder."
+  - path: .github/scripts/fanout.mjs
+    disposition: operator
+    args: "[{runs_root}/<run_id>] --stage 4 --phase <slate|author|join> --write"
+    purpose: "Writes the briefs for stage 4's fan-out, read from the contract's `invocations:`: the slate brief that names the set, one author brief per slate entry, and the join brief. It writes briefs, never documents."
+    who: "A person or the agent through `SPOCK: stage 4 — the slate brief` and `SPOCK: stage 4 — the author briefs`."
+    reads: "The workflow contract for stage 4, the run's RUN-STATE.md and its slate."
+    writes: "With `--write`, the brief files in the stage's brief folder, as the contract names it."
+  - path: .github/scripts/interaction.mjs
+    disposition: harness
+    args: "--journal <chatSessions/<session>.jsonl> [--run {runs_root}/<run_id> --write]"
+    purpose: "Measures whether the agent kept the interaction rules, read off the chat journal the person actually saw; it keeps counts and never a word of what was said."
+    who: "Only our build, by hand, against a VS Code chat journal; no task runs it."
+    reads: "A VS Code `chatSessions/<session>.jsonl` journal."
+    writes: "With `--run … --write`, `interaction-<session>.json` (counts only) in that run's traces folder; otherwise nothing."
+  - path: .github/scripts/task.mjs
+    disposition: operator
+    args: "<script> [args] [:: <script> [args] …]"
+    purpose: "Runs a task's scripts in order: it applies each box's refusal before any script runs, hands the box values to the scripts through the environment, stops the chain at the first failure, prints the output and keeps all of it in `.github/last-task.md`."
+    who: "Every task in `.vscode/tasks.json`: each task's command is `node .github/scripts/task.mjs` followed by the scripts it runs."
+    reads: "`.vscode/tasks.json` and the box declarations (`boxes.mjs`), the environment VS Code sets for the task, and the run's RUN-STATE.md for the run a task is about."
+    writes: "`.github/last-task.md` (the whole output of the last task, with an earlier failure that has not passed since); everything else is written by the scripts it runs."
+  - path: .github/scripts/update.mjs
+    disposition: operator
+    args: "--how <update | \"update, and set aside my changes to the workflow's own files\">"
+    purpose: "Moves a tester's copy of the workflow to the lab's latest release without a merge, keeping the runs, the two local settings and the competitors kept on that copy."
+    who: "A person through `SPOCK: update this copy to the latest release`, whose one box picks how."
+    reads: "`.github/update-from` (where to update from), `.github/release-files.json` (to find workflow files changed or added on this computer, as C189 does), `.github/build`, `.github/surface`, `.github/runs-root`, the runs folder (whether a run is unfinished), and the copy's git state against the lab's branch."
+    writes: "Moves the copy to the lab's latest commit unless a run is unfinished; writes back the two local settings; rebuilds the competitor store in `.github/store/` through `store.mjs`. With the second choice it first copies each changed workflow file into a `set-aside-<date-time>` folder under the runs folder and puts the release's version back. It refuses, changing nothing, when workflow files were changed and the first choice was picked, or when a file added on this computer has the name of one the new release brings."
+  - path: .github/scripts/setup-check.mjs
+    disposition: operator
+    args: "--tool <tool>"
+    purpose: "Says line by line whether this computer has what SPOCK needs (VS Code, the chat tool, the agents, the build, git and the update source) and ends on a numbered list of what to do when something is missing."
+    who: "A person through `SPOCK: check my setup`."
+    reads: "`.github/build`, `.github/update-from`, `.github/agents/`, `.github/copilot-instructions.md`, `.github/registry/agents.yaml`, `SETUP.md` and the copy's git state."
+    writes: "`.github/surface`, the tool the person picked."
+  - path: .github/scripts/frame.mjs
+    disposition: library
+    purpose: "Writes the frame of a document the agent owes before the agent writes it: the title, the run id, the record's id and number, the sources, the empty lists and, where a stage has one, the opening block."
+    who: "Imported by `advance.mjs`, `assemble.mjs`, `check.mjs`, `fanout.mjs`, `solution-join.mjs` and `written.mjs`; never run on its own."
+    reads: "The run's RUN-STATE.md, the skills' `SKILL.md` record lines and `.github/artifact-fields.yaml`."
+    writes: "For its caller, a framed document and its record in the run's stage folder."
+  - path: .github/scripts/envelope.mjs
+    disposition: library
+    purpose: "Computes the envelope of a stage's documents and records in one place, for the envelope step, the frame writer, the approval and the checker's view of a stage in flight."
+    who: "Imported by `advance.mjs`, `assemble.mjs`, `card-join.mjs`, `check.mjs`, `content-seen.mjs`, `frame.mjs`, `hand-edit.mjs`, `metrics.mjs`, `reading-copy.mjs`, `run-state.mjs` and `written.mjs`; never run on its own."
+    reads: "The run's RUN-STATE.md, documents and records, the workflow contracts, `.github/artifact-fields.yaml`, the agent and skill registers and `notes/marked-edits.md`."
+    writes: "For its caller, the front matter of the stage's documents and records; nothing in its view."
+  - path: .github/scripts/findings.mjs
+    disposition: library
+    purpose: "Reads what a gate failed from the checker's machine view (`check.mjs --gate Q<n> --findings`), so every reader of a gate takes each finding's check, document and shape from the same fields."
+    who: "Imported by `advance.mjs`, `check.mjs`, `explain.mjs`, `keep.mjs`, `run-readme.mjs`, `run-state.mjs` and `written.mjs`; never run on its own."
+    reads: "The output of `check.mjs`, which it runs for its caller."
+    writes: "Nothing."
+  - path: .github/scripts/capture.mjs
+    disposition: library
+    purpose: "Runs a child process and reports whether its whole answer arrived, so a truncated output is never read as a short complete one."
+    who: "Imported by `check.mjs`, `explain.mjs`, `findings.mjs`, `repo-check.mjs`, `run-state.mjs` and `written.mjs`; never run on its own."
+    reads: "The child's output."
+    writes: "Nothing."
+  - path: .github/scripts/suite-journal.mjs
+    disposition: library
+    purpose: "Writes down what the negative suite is about to change in the tree before it changes it, puts it back after a stopped suite, and refuses a second suite in the same checkout."
+    who: "Imported by `check.test.mjs`, the negative suite, only; never run on its own."
+    reads: "Its journal of changed files."
+    writes: "The suite's journal and the files it puts back."
+  - path: .github/scripts/stdout-sync.mjs
+    disposition: library
+    purpose: "Makes a script's printed report survive its own `process.exit()` when its output goes to a pipe; imported first by every script that reports."
+    who: "Imported first, for its effect, by the scripts that print a report (`import './stdout-sync.mjs'`); never run on its own."
+    reads: "Nothing."
+    writes: "Nothing; it makes standard output synchronous."
+  - path: .github/scripts/surface.mjs
+    disposition: library
+    purpose: "Says which surface a run is driven on: the one a person declared in `.github/surface`, and what can be observed, never inferred from a missing signal."
+    who: "Imported by `check.mjs`, `repo-check.mjs`, `run-state.mjs` and `setup-check.mjs`; never run on its own."
+    reads: "`.github/surface`."
+    writes: "Nothing."
+  - path: .github/scripts/facts.mjs
+    disposition: operator
+    args: ""
+    purpose: "Prints what this build can state about itself (counts of skills, agents, checks, know-how bodies and more), each computed from the build with where it comes from."
+    who: "A person or the agent through `SPOCK: what this build can say about itself`."
+    reads: "The skill, agent, assurance and regmap registers, the know-how tree, the business logic, the gate model, the competitor store and the run records `metrics.mjs` reads."
+    writes: "Nothing."
+  - path: .github/scripts/material.mjs
+    disposition: operator
+    stage: 2
+    purpose: "Lists what a run's problem material folder holds and which of it the agent can open directly."
+    who: "The workflow: `advance.mjs` runs it once stage 2 has produced; a person or the agent through `SPOCK: what material has been supplied`."
+    reads: "The run's `2-problems/supplied/` folder and RUN-STATE.md."
+    writes: "With `--write`, the `2-problems/supplied/` folder with its keep file where the run arrived without one; otherwise nothing."
+  - path: .github/scripts/promote-competitors.mjs
+    disposition: operator
+    args: "[<run_id>] [--write]"
+    purpose: "Keeps a finished run's competitor cards, so the committed competitor store learns from the run."
+    who: "A person through `SPOCK: keep this run's competitors`."
+    reads: "The run's RUN-STATE.md and competitor cards, and the store's corpus and `KEPT.md`."
+    writes: "With `--write`, a copy of the run's cards under `.github/store/corpus/` and a line in `KEPT.md`; the store itself is then rebuilt by `store.mjs`."
+  - path: .github/scripts/run-material.mjs
+    disposition: library
+    purpose: "Says what a run is made of (real material, fixtures or a mix), as `.github/registry/fixtures.yaml` declares it, never inferred from the research it did."
+    who: "Imported by `check.mjs`; never run on its own."
+    reads: "`.github/registry/fixtures.yaml`."
+    writes: "Nothing."
+  - path: .github/scripts/written.mjs
+    disposition: operator
+    args: "[{runs_root}/<run_id>] [--chain]"
+    purpose: "Lists what the stage in progress has written so far and what the checks say about each document, before the stage's gate can decide the whole stage; on a run started on 1.16.1 or later it reads the stage's envelope as `envelope.mjs` computes it and names what that refuses."
+    who: "A person or the agent through `SPOCK: check what is written, then continue`."
+    reads: "The run's RUN-STATE.md, documents and records, and what `check.mjs --document` reports for each."
+    writes: "The frames of the documents the stage owes, through `frame.mjs`. On a run started before 1.16.1 also, at stage 2, what `problem-material.mjs --measure` writes, the measurement of the supplied items the material record has not yet measured, and, with `--chain` on a run that records its build, the envelope of the stage's documents and records."
+  - path: .github/scripts/assemble.mjs
+    disposition: generator
+    args: "[run_id] [--stage <n>] [--write] [--finalise]"
+    purpose: "Fills the envelope of the documents and records a stage has written, as `envelope.mjs` computes it from the contract, the registry and the field spec. On a run started on 1.16.1 or later `--write` writes nothing while the stage is being written and says what is written at approval, and `--finalise` writes a stage once it is accepted; on an earlier run `--write` fills it as before. Never the body, except the section headings of the initiative and the PRD in the run's language, never the content fields a gate decides, and the decision block only from the decision the run records."
+    who: "A person through `SPOCK: fill in the envelope`; `run-state.mjs` runs it with `--finalise` when it records a stage accepted on a run started on 1.16.1 or later."
+    reads: "The run's RUN-STATE.md and documents, the workflow contracts, `.github/artifact-fields.yaml`, the agent and skill registers and `notes/marked-edits.md`."
+    writes: "The front matter of the stage's documents and records: with `--write` on a run started before 1.16.1 or on a stage already accepted, and with `--finalise`."
+  - path: .github/scripts/convert.mjs
+    disposition: operator
+    stage: 2
+    purpose: "Turns every Word, PowerPoint, Excel and PDF file a run was given into text beside the original, with nothing installed and nothing replaced; a PDF is read whole or refused with its reason and the route through Word."
+    who: "The workflow: `advance.mjs` runs it once stage 2 has produced; a person or the agent through `SPOCK: convert the documents that were supplied`."
+    reads: "The run's supplied folders and RUN-STATE.md."
+    writes: "A `.md` text file beside each converted original in the supplied folder."
+  - path: .github/scripts/metrics.mjs
+    disposition: operator
+    args: "[{runs_root}/<run_id>] [--json]"
+    purpose: "Reports how the workflow performed, read from what the run records already say: gate dates, refinement rounds, superseded documents, declared gaps and answered questions, against the baseline record."
+    who: "A person or the agent through `SPOCK: how the workflow performed`."
+    reads: "Every committed run, or the one named: RUN-STATE.md, `notes/marked-edits.md` and the documents; and `.github/registry/baseline.yaml`."
+    writes: "Nothing."
+  - path: .github/scripts/trace.mjs
+    disposition: operator
+    args: "--in <trace file> --run {runs_root}/<run_id> [--write] | --show {runs_root}/<run_id>"
+    purpose: "Reduces a raw OpenTelemetry trace file that VS Code Copilot Chat wrote to the spans `.github/registry/tracing.yaml` declares, grouped by run, and shows what a run already carries."
+    who: "A person through `SPOCK: reduce a raw trace`."
+    reads: "The trace file named with `--in`, `.github/registry/tracing.yaml` and the run's traces folder."
+    writes: "With `--write`, the reduced trace records in the run's traces folder."
+  - path: .github/scripts/template-diff.mjs
+    disposition: operator
+    args: "{runs_root}/<run_id> [<artifact id>] | --templates"
+    purpose: "Shows a document against the template it was written to, as a diff, for the person at the decision gate: the PRD against the PRD template and the initiative against the initiative template."
+    who: "A person or the agent through `SPOCK: an artifact against its template`."
+    reads: "The run's PRD and initiative, and the templates under `.github/know-how/`."
+    writes: "Nothing."
+  - path: .github/scripts/problem-material.mjs
+    disposition: generator
+    args: "<run_id> --write"
+    purpose: "Writes stage 2's problem-material record from what the person actually supplied (files, pasted text, a problem in their own words), with each item's source, size and period, and measures items not yet measured."
+    who: "A person through `SPOCK: add problem material`, `SPOCK: add a problem in my own words` and `SPOCK: date the material that arrived without dates`; a person or the agent through `SPOCK: read in the problem material`."
+    reads: "The run's `2-problems/supplied/` folder, its notes and RUN-STATE.md."
+    writes: "With `--write`, `2-problems/1-problem-material.md`; with `--typed` or `--from-chat`, the person's text as a file in the supplied folder; with `--measure`, the size fields of items not yet measured."
+  - path: .github/scripts/market-material.mjs
+    disposition: generator
+    args: "<run_id> --write"
+    purpose: "Records on the run record the market list a person supplied in place of a stage 3 web search: its file name, size, hash and how many competitors and trends it holds, counted from its headings without reading what the entries say."
+    who: "A person through `SPOCK: what market material has been supplied`, whose box asks them to confirm when the list has changed. The workflow does not run it on its own; `pasted.mjs` uses it for a list pasted in the chat."
+    reads: "The run's RUN-STATE.md and the one file in `3-competitive-analysis/supplied/`."
+    writes: "With `--write`, the stage 3 `supplied_market` entry on RUN-STATE.md, through `run-state.mjs`; it creates `3-competitive-analysis/supplied/` when the run has none. It refuses a changed list without the person's confirmation, and once stage 3 is in review or accepted."
+  - path: .github/scripts/pasted.mjs
+    disposition: operator
+    args: "<run_id> <stage> --by <name>"
+    purpose: "Takes what a person pasted in the chat into the run as theirs: problem material at stage 2, a market list at stage 3, recorded as the person's supply."
+    who: "A person through `SPOCK: take in what I pasted in the chat`."
+    reads: "The text the task hands it, the run's RUN-STATE.md and supplied folders."
+    writes: "The pasted text as a file in the stage's supplied folder, and the record through `problem-material.mjs` or `run-state.mjs`."
+  - path: .github/scripts/box-words.mjs
+    disposition: library
+    purpose: "Holds the two names a box travels under: the environment prefix its value arrives in and the word a task's command names it with."
+    who: "Imported by `repo-check.mjs`, `task-page.mjs` and `task.mjs`; never run on its own."
+    reads: "Nothing."
+    writes: "Nothing."
+  - path: .github/scripts/task-page.mjs
+    disposition: generator
+    args: "--write"
+    purpose: "Writes `specifications/onboarding/TASKS.md`, the page saying what every task a person can run does, from `.vscode/tasks.json`."
+    who: "Whoever changes its sources, with `--write`; the repository checks refuse the file when it is not what this writes."
+    reads: "`.vscode/tasks.json`."
+    writes: "With `--write`, `specifications/onboarding/TASKS.md`."
+  - path: .github/scripts/run-readme.mjs
+    disposition: generator
+    args: "{runs_root}/<run_id> [--write]"
+    purpose: "Writes a run's front page (README.md) from the run it describes: what it produced, where each stage stands, what it waits on and what to read first."
+    who: "A person or the agent through `SPOCK: regenerate the run's front door`."
+    reads: "The run's RUN-STATE.md, documents and `notes/marked-edits.md`, the workflow contracts and the agent register."
+    writes: "With `--write`, the run's `README.md`."
+  - path: .github/scripts/reading-copy.mjs
+    disposition: generator
+    args: "{runs_root}/<run_id> [--write]"
+    purpose: "Writes the reading copy of the initiative, the one document Česká spořitelna is handed, from the initiative with its machine record stripped."
+    who: "A person or the agent through `SPOCK: stage 7 — the reading copy`."
+    reads: "The run's initiative (`7-initiative/initiative.md`)."
+    writes: "With `--write`, `read/7-initiative/initiative.md` in the run; it clears what else `read/` holds first."
+  - path: .github/scripts/agent-descriptions.mjs
+    disposition: generator
+    args: "--write"
+    purpose: "Writes each agent's description, the line the agent picker shows: its purpose and trigger phrases from `agents.yaml`, and between them, from the registry, the documents it works from and writes, by their names, whether it reaches outside the repository and its tools."
+    who: "Whoever changes its sources, with `--write`; the repository checks refuse the file when it is not what this writes."
+    reads: "`.github/registry/agents.yaml` and `.github/registry/skills.yaml`."
+    writes: "With `--write`, the `description:` line of each agent file under `.github/agents/`; without it, names each file whose line differs."
+  - path: .github/scripts/store.mjs
+    disposition: generator
+    stage: 3
+    args: "--write"
+    purpose: "Rebuilds the competitor store from the committed example runs and the runs a person kept with `SPOCK: keep this run's competitors`; a stage writes what it finds into its own run, never into the store."
+    who: "The workflow: `advance.mjs` runs it once stage 3 has produced; a person through `SPOCK: keep this run's competitors`; a person or the agent through `SPOCK: stage 3 — join the cards, then the store`."
+    reads: "The competitor cards of the example runs under `fixtures/` and of the kept runs under `.github/store/corpus/`."
+    writes: "With `--write`, `.github/store/S1-competitors.md`."
+  - path: .github/scripts/know-how.mjs
+    disposition: generator
+    purpose: "Writes the build's know-how tree `.github/know-how/` from its source of record, `specifications/definitions/know-how/`."
+    who: "Whoever changes its sources, with `--write`; the repository checks refuse the file when it is not what this writes."
+    reads: "`specifications/definitions/know-how/` and `.github/registry/skills.yaml`."
+    writes: "With `--write`, the files under `.github/know-how/`."
+  - path: .github/scripts/fixed-messages.mjs
+    disposition: generator
+    args: "[--write] [--review <last review document> <new one>]"
+    purpose: "Holds the workflow's fixed messages, gate questions and the words a check reads, in English and in Czech, in one table, and writes the Czech block under each English message in the files that show one."
+    who: "Whoever changes a message or a word a check reads, with `--write`; the repository checks refuse a Czech block that is not what it writes. The checks and the scripts that print a message import its table."
+    reads: "Its own table, and the files whose message blocks it writes (the shared rules and the skills that carry one)."
+    writes: "With `--write`, the Czech block under each English block in those files; with `--review`, the next review document of the Czech lines, from the last one."
+  - path: .github/scripts/messages.mjs
+    disposition: library
+    purpose: "Fills the message a person reads at each moment of a stage from the record, in the run's language, for the task to print and the agent to send as it stands."
+    who: "Imported by `advance.mjs`, `guard-rules.mjs` and `repo-check.mjs`; never run on its own."
+    reads: "The run's RUN-STATE.md and the agent register."
+    writes: "Nothing."
+  - path: .github/scripts/regmap.mjs
+    disposition: generator
+    purpose: "Writes `specifications/REGMAP.md`, the regulatory map, from `.github/registry/regmap.yaml` and the skills' bindings."
+    who: "Whoever changes its sources, with `--write`; the repository checks refuse the file when it is not what this writes."
+    reads: "`.github/registry/regmap.yaml` and `.github/registry/skills.yaml`."
+    writes: "With `--write`, `specifications/REGMAP.md`."
+  - path: .github/scripts/signpost.mjs
+    disposition: generator
+    purpose: "Writes `specifications/DOCUMENTATION.md`, every document a person can read and which of them a person may edit."
+    who: "Whoever changes its sources, with `--write`; the repository checks refuse the file when it is not what this writes."
+    reads: "`specifications/documents.yaml` and the documents under `specifications/`."
+    writes: "With `--write`, `specifications/DOCUMENTATION.md`."
+  - path: .github/scripts/content-register.mjs
+    disposition: generator
+    purpose: "Writes `specifications/CONTENT-REGISTER.md`, what this build is made of, joined from the registries that already hold it."
+    who: "Whoever changes its sources, with `--write`; the repository checks refuse the file when it is not what this writes."
+    reads: "`specifications/documents.yaml`, the business logic, the skill, agent, scoring and regmap registers, the know-how tree and `.github/COVERAGE-CHECKS.md`."
+    writes: "With `--write`, `specifications/CONTENT-REGISTER.md`."
+  - path: .github/scripts/register.mjs
+    disposition: generator
+    args: "[--write] [--verify] [--spec <path>]"
+    purpose: "Writes `.github/COVERAGE-CHECKS.md`, one card per registered check, joining the hand-written cards with where the gates run each check and what passes; `--verify` reconciles §7.4, the gate model, the checker, the shapes and the cards and refuses any disagreement."
+    who: "Whoever changes its sources, with `--write`; the repository checks refuse the file when it is not what this writes."
+    reads: "§7.4 of `specifications/PILOT-BUSINESS-LOGIC.md`, `gates.mjs`, `check.mjs`, `repo-check.mjs`, `.github/registry/shapes.yaml`, `.github/registry/checks.yaml`, `.github/artifact-fields.yaml` and `.vscode/tasks.json`."
+    writes: "With `--write`, `.github/COVERAGE-CHECKS.md`, and each run check's line in §7.4 from its card's why."
+  - path: .github/scripts/floor.mjs
+    disposition: generator
+    purpose: "Writes `.github/composed-behaviours.yaml`, the composed-behaviour carrier, from `COMPOSED_FLOOR` in the gate model."
+    who: "Whoever changes its sources, with `--write`; the repository checks refuse the file when it is not what this writes."
+    reads: "`gates.mjs`."
+    writes: "With `--write`, `.github/composed-behaviours.yaml`."
+  - path: .github/scripts/artifact-fields.mjs
+    disposition: generator
+    args: "[--write] [<artifact id>]"
+    purpose: "Writes `.github/artifact-fields.yaml`, the field set of every artifact, read from §6 of the business logic, and prints one artifact's set on request."
+    who: "Whoever changes its sources, with `--write`; the repository checks refuse the file when it is not what this writes."
+    reads: "§6 of `specifications/PILOT-BUSINESS-LOGIC.md` and the know-how tree."
+    writes: "With `--write`, `.github/artifact-fields.yaml`."
+  - path: .github/scripts/unverified.mjs
+    disposition: generator
+    purpose: "Writes `.github/could-not-verify.yaml`, the rules each skill's gate cannot verify mechanically, which every artifact carries, from the gate model."
+    who: "Whoever changes its sources, with `--write`; the repository checks refuse the file when it is not what this writes."
+    reads: "`gates.mjs`."
+    writes: "With `--write`, `.github/could-not-verify.yaml`."
+  - path: .github/scripts/operator.mjs
+    disposition: generator
+    purpose: "Writes `.github/OPERATING-A-RUN.md`, the page for whoever operates a run by hand, from the workflow contracts, the gate model, this register and the run tree."
+    who: "Whoever changes its sources, with `--write`; the repository checks refuse the file when it is not what this writes."
+    reads: "The workflow contracts, `gates.mjs`, `.github/registry/scripts.yaml`, `.github/registry/agents.yaml`, `specifications/documents.yaml` and `.github/runs-root`."
+    writes: "With `--write`, `.github/OPERATING-A-RUN.md`."
+  - path: .github/scripts/release-files.mjs
+    disposition: generator
+    args: "--write"
+    purpose: "Writes the release's list of its own files with their hashes, and holds the comparison C189 and the update make against it."
+    who: "Whoever prepares a release, with `--write` in the copy being released; `check.mjs` (for C189) and `update.mjs` import its comparison."
+    reads: "The files under `.github/` and `.vscode/` that a release holds."
+    writes: "With `--write`, `.github/release-files.json` in the copy being released."
+  - path: .github/scripts/repo-check.mjs
+    disposition: harness
+    args: ""
+    purpose: "Runs the repository checks, the ones no run can answer: whether the workflow's own files, registries, generated pages, know-how and example runs agree with each other and with the build."
+    who: "Only our build: whoever changes the build, and the release's proof; a person can also run it through `SPOCK: check the repository`."
+    reads: "The workflow's own files: the scripts, skills, agents, instructions, registries, know-how, workflow contracts, generated pages, specifications and the example runs."
+    writes: "Nothing that stays; a check that needs a scratch copy removes it."
+  - path: .github/scripts/check.test.mjs
+    disposition: harness
+    args: "[--runs | --repo]"
+    purpose: "The negative suite: breaks the example runs and the build in one named way at a time and proves each check fails on it, so every registered check is observed both passing and failing."
+    who: "Only our build: whoever changes the build, and the release's proof."
+    reads: "The example runs under `fixtures/` and the whole build."
+    writes: "Scratch copies outside the tree; the files an arm doctors in the tree are written down first in its journal and put back after."
+  - path: .github/scripts/eval.mjs
+    disposition: harness
+    args: "[{runs_root}/<run_id>]"
+    purpose: "Runs the held-out evaluation suites per skill, graded by the cheapest instrument that can decide each case, and grades a real run on request."
+    who: "Only our build: whoever changes the build; `repo-check.mjs` runs it for the check on evaluation suites."
+    reads: "The suites under `.github/evals/`, `.github/registry/skills.yaml`, the Method Canon and, when named, a run's documents."
+    writes: "Nothing."
+  - path: .github/scripts/judge.mjs
+    disposition: harness
+    args: "Q<n> [--verdict-file <file>] | --rules"
+    purpose: "The door to a quality gate's judged half: it resolves which judged rules a gate carries and who may decide them, and takes verdicts produced elsewhere; it produces no verdict of its own."
+    who: "Only our build: whoever changes the build; `repo-check.mjs` runs it for its own check."
+    reads: "The gate model's judged rules, `.github/registry/assurance.yaml` and `.github/registry/skills.yaml`, and the verdict file named."
+    writes: "Nothing."
+  - path: .github/scripts/rubric.mjs
+    disposition: harness
+    purpose: "The decidable half of the output-quality rubric, shared by the evaluation suite and anything that grades a document."
+    who: "Only our build: imported by `eval.mjs`."
+    reads: "The document text its caller hands it."
+    writes: "Nothing."
+  - path: .github/scripts/registry-schema.mjs
+    disposition: harness
+    args: ""
+    purpose: "Validates every agent and skill definition, and every binding, against the definition schema."
+    who: "Only our build: whoever changes the build; `repo-check.mjs` imports it for its schema check."
+    reads: "`.github/registry/agents.yaml`, `.github/registry/skills.yaml` and the gate model."
+    writes: "Nothing."
+  - path: .github/scripts/field-walk.mjs
+    disposition: harness
+    args: "[--undeclared]"
+    purpose: "Lists every field a check reads from a document, by artifact, against the fields the artifact's declaration lets an instruction write, and with `--undeclared` only the reads nothing declares."
+    who: "Only our build: whoever changes the build; `repo-check.mjs` imports it for its field check."
+    reads: "`check.mjs`, `.github/artifact-fields.yaml` and `.github/registry/field-walk.yaml`."
+    writes: "Nothing."
+  - path: .github/scripts/rule-sentences.mjs
+    disposition: harness
+    args: "[--write]"
+    purpose: "Lists every rule sentence (one carrying never, do not, must not or always) on the four surfaces an agent reads with the sort the rule-sentence register holds for it."
+    who: "Only our build: whoever changes a sentence on those surfaces runs it with `--write`; `repo-check.mjs` imports it for its register check."
+    reads: "`.github/copilot-instructions.md`, `.github/instructions/`, `.github/agents/`, each skill's `SKILL.md` and `.github/registry/rule-sentences.yaml`."
+    writes: "With `--write`, `.github/registry/rule-sentences.yaml`: an `unseen` row for each new sentence, and the row of a sentence on no surface dropped, each named."
+  - path: .github/scripts/gates.mjs
+    disposition: library
+    purpose: "The gate model every script shares: which checks each quality gate runs, the decision gates, who may sign what, the repository checks, the passing shapes' reader, the build gate of each rule and the run's states and moves."
+    who: "Imported by 33 scripts, among them `advance.mjs`, `assemble.mjs`, `boxes.mjs` and `check.mjs`; never run on its own."
+    reads: "`.github/registry/shapes.yaml`, and a run's documents and records where a caller asks what was chosen or decided."
+    writes: "Nothing."
+  - path: .github/scripts/contracts.mjs
+    disposition: library
+    purpose: "Reads the workflow contracts once: what each stage produces and requires and which stage produces each document."
+    who: "Imported by 14 scripts, among them `advance.mjs`, `assemble.mjs`, `check.mjs` and `fanout.mjs`; never run on its own."
+    reads: "`.github/workflow-contracts/` and `.github/registry/skills.yaml`."
+    writes: "Nothing."
+  - path: .github/scripts/withdraw.mjs
+    disposition: operator
+    args: "<run_id> --file <path inside the run> --reason <why>"
+    purpose: "Takes back a file or a stage's files from a run as a workflow act with a trail: nothing is deleted, and a folder named is listed before anything moves."
+    who: "A person through `SPOCK: take something back`."
+    reads: "The run's RUN-STATE.md and the files named."
+    writes: "Moves each file taken back into the run's `superseded/` folder, with a note of who took it back, when and why, and removes it from where it stood."
+  - path: .github/scripts/hand-edit.mjs
+    disposition: operator
+    args: "<run_id> --document <path inside the run> --what <what changed> --why <why> --by <name>"
+    purpose: "Records a person's own change to a document as theirs: it marks the document `modified_by: human` and adds an account of what they changed, why and who they are."
+    who: "A person through `SPOCK: record that I edited a document`."
+    reads: "The run's RUN-STATE.md and the document named."
+    writes: "The document's front matter, and the account in the run's `notes/marked-edits.md`."
+  - path: .github/scripts/keep.mjs
+    disposition: operator
+    args: "<run_id> <stage> --by <name> --why <why it still stands> [--role <role>]"
+    purpose: "Keeps a later stage as it is after a stage it is built on was sent back and accepted again, once every stage it is built on is accepted, as the person's recorded decision."
+    who: "A person through `SPOCK: keep a later stage as it is`."
+    reads: "The run's RUN-STATE.md and the gate's findings for the stage."
+    writes: "The keep decision on RUN-STATE.md, through `run-state.mjs accept-stale`."
+  - path: .github/scripts/run-files.mjs
+    disposition: library
+    purpose: "Says where a run keeps each document, its records and parts, and where the runs root is: the one place that knows."
+    who: "Imported by 38 scripts, among them `advance.mjs`, `assemble.mjs`, `card-join.mjs` and `check.mjs`; never run on its own."
+    reads: "`.github/runs-root` and a run's folder."
+    writes: "Nothing."
+  - path: .github/scripts/content-seen.mjs
+    disposition: library
+    purpose: "Fingerprints what a stage's documents and decisions said at a gate, so a stage changed after its gate has the gate run again before the approval is recorded."
+    who: "Imported by `advance.mjs`, `check.mjs`, `run-readme.mjs` and `run-state.mjs`; never run on its own."
+    reads: "A stage's documents and its record."
+    writes: "Nothing; `run-state.mjs` records the fingerprints."
+  - path: .github/scripts/boxes.mjs
+    disposition: library
+    purpose: "Declares what every box a person fills takes (its type, its example and its one refusal) beside the code that applies it."
+    who: "Imported by `keep.mjs`, `repo-check.mjs`, `run-state.mjs` and `task.mjs`; never run on its own."
+    reads: "Nothing."
+    writes: "Nothing."
+  - path: .github/scripts/decision-block.mjs
+    disposition: library
+    purpose: "Renders the decision block a document carries, in one place, from the run record, so the two writers of a decision cannot shape it two ways."
+    who: "Imported by `advance.mjs`, `assemble.mjs`, `boxes.mjs`, `check.mjs`, `keep.mjs`, `messages.mjs`, `run-state.mjs` and `task.mjs`; never run on its own."
+    reads: "The run record its caller hands it."
+    writes: "Nothing; its callers write the block."
+  - path: .github/scripts/extract-ooxml.mjs
+    disposition: library
+    purpose: "Takes text out of Word, PowerPoint and Excel files in the document's own order (slides with their notes, sheets with each cell under its column, Word tables by rows), with Node built-ins only."
+    who: "Imported by `convert.mjs`; never run on its own."
+    reads: "The file its caller names."
+    writes: "Nothing."
+  - path: .github/scripts/extract-pdf.mjs
+    disposition: library
+    purpose: "Takes text out of a PDF page by page with Node built-ins only, or refuses the file whole (scanned, copy-protected, undecodable, unreadable or too large) with a plain reason."
+    who: "Imported by `convert.mjs`; never run on its own."
+    reads: "The file its caller names."
+    writes: "Nothing."
+  - path: .github/scripts/yaml.mjs
+    disposition: library
+    purpose: "The one reader of the YAML subset this repository writes; it refuses what it does not support rather than half-reading it."
+    who: "Imported by 33 scripts, among them `advance.mjs`, `assemble.mjs`, `card-join.mjs` and `check.mjs`; never run on its own."
+    reads: "The text its caller hands it."
+    writes: "Nothing."
+  - path: .github/scripts/trust.mjs
+    disposition: library
+    purpose: "The trust arithmetic from Evidence Standards §5: the tag a hypothesis's evidence earns, computed the same way for the gate and the evaluation suite."
+    who: "Imported by `advance.mjs`, `check.mjs` and `eval.mjs`; never run on its own."
+    reads: "The evidence its caller hands it."
+    writes: "Nothing."
+  - path: .github/scripts/scoring.mjs
+    disposition: library
+    purpose: "Reads the retired scoring model in `.github/registry/scoring.yaml` once, for the checks that still hold the register to it."
+    who: "Imported by `content-register.mjs` and `repo-check.mjs`; never run on its own."
+    reads: "`.github/registry/scoring.yaml`."
+    writes: "Nothing."
+  - path: .github/scripts/screening-inputs.mjs
+    disposition: library
+    purpose: "Reads `.github/registry/screening-inputs.yaml` and its join of canonical screening inputs to the rows of the four regulatory area cards."
+    who: "Imported by `check.mjs` and `repo-check.mjs`; never run on its own."
+    reads: "`.github/registry/screening-inputs.yaml`, `.github/registry/regmap.yaml` and the area cards under `.github/know-how/`."
+    writes: "Nothing."
+  - path: .github/scripts/reductions.mjs
+    disposition: library
+    purpose: "Reads each skill's declared reductions (what it cannot do while a body of know-how is absent) and whether their lifting conditions are met."
+    who: "Imported by `repo-check.mjs`; never run on its own."
+    reads: "`.github/registry/skills.yaml` and `.github/artifact-fields.yaml`."
+    writes: "Nothing."
+  - path: .github/scripts/canon.mjs
+    disposition: library
+    purpose: "Resolves a Method Canon citation: whether the section a method claim cites exists in the canon text its caller hands it."
+    who: "Imported by `eval.mjs`; never run on its own."
+    reads: "The canon text its caller hands it."
+    writes: "Nothing."
+  - path: .github/scripts/doc-structure.mjs
+    disposition: library
+    purpose: "Document structure from Documentation Standards §1 and §3: each document's section set and name, read from the document's headings, never from what it says about itself."
+    who: "Imported by 10 scripts, among them `advance.mjs`, `agent-descriptions.mjs`, `assemble.mjs` and `check.mjs`; never run on its own."
+    reads: "The document text its caller hands it."
+    writes: "Nothing."
+  - path: .github/scripts/prd.mjs
+    disposition: library
+    purpose: "PRD section coverage from the PRD Template §2: every template section present, or declared not applicable with a reason."
+    who: "Imported by `assemble.mjs`, `check.mjs`, `eval.mjs`, `frame.mjs`, `run-state.mjs` and `template-diff.mjs`; never run on its own."
+    reads: "The PRD text its caller hands it."
+    writes: "Nothing."
+  - path: .github/scripts/guard-rules.mjs
+    disposition: library
+    purpose: "The step guards' rules: what VS Code asks this build at a moment of an agent's turn and the answer, refusing a tool call or sending the agent back with a reason."
+    who: "Imported by `step-guard.mjs`; never run on its own."
+    reads: "The hook's input, the run's RUN-STATE.md, `.github/last-task.md`, `.vscode/tasks.json` and the agent register."
+    writes: "Its notes of the turn under `.github/.guard/`."
+  - path: .github/scripts/step-guard.mjs
+    disposition: hook
+    purpose: "The entry VS Code runs at a moment of an agent's turn: it reads the hook's input from standard input and prints the answer `guard-rules.mjs` gives."
+    who: "VS Code, through the hooks the workflow declares, during an agent's turn; no person and no agent runs it."
+    reads: "The hook's input on standard input."
+    writes: "A log line under `.github/.guard/`."

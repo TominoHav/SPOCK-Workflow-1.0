@@ -1,0 +1,342 @@
+# The design documents — the one register for what no other registry owns.
+#
+# **Why this exists.** Every other surface in this build has a register behind it: the agents, the skills,
+# the artifacts, the checks, the know-how bodies, the regulatory areas, the scoring model. Without one here, a
+# design document could drift from the build with nothing noticing.
+#
+# **What it does not do.** It does not restate what another registry already holds. A know-how body is
+# governed by `skills.yaml` and `area.md`, and a regulatory dossier by
+# `regmap.yaml`. Those folders are listed under `governed:` with the registry and the checks that own
+# them, and their files are not entered here. **Copying their paths into a second file is the
+# duplication this register exists to refuse.**
+#
+# **Three dispositions and no fourth.** A markdown file under `specifications/` is entered here, or it sits in a
+# folder another registry governs, or it sits in a folder this file exempts with a reason. `C135` fails the
+# build on anything else, which is what stops the tidy from silently coming undone.
+
+version: "0.1"
+owner: igor.tadic
+date: "2026-08-27"
+
+# ── folders another registry owns ────────────────────────────────────────────────────
+#
+# The registry named is the authority on what belongs there; the checks named are what enforce it. A file
+# in one of these is accounted for by that machinery and is not entered below.
+
+governed:
+  - path: specifications/definitions/know-how/
+    by: .github/registry/skills.yaml, specifications/definitions/area.md
+    checks: [C41, C68, C90, C94]
+    note: "The source of record for the generated tree at .github/know-how/. C41 compares the two in both directions."
+
+  - path: specifications/regulatory-research/
+    by: .github/registry/regmap.yaml
+    checks: [C119]
+    note: "One dossier per regulatory area, holding the statutory reading behind that area's card, plus the ČS transcript behind the one area card the bank supplied. C119 fails when a dossier or a transcript the registry names has moved. **The transcript sits with the dossiers**, beside every other piece of regulatory evidence."
+
+# ── folders deliberately outside the register ────────────────────────────────────────
+#
+# **A reason, not a silence.** An exemption with no reason is indistinguishable from a folder nobody got
+# round to registering.
+
+exempt:
+
+  - path: specifications/evidence/
+    reason: "**Measured evidence kept beside the build.** It holds the variance proof `assurance.yaml` names and the first free-roam dispatch, because a registry pointing outside the repository is a claim a reader cannot check. It is exempt rather than registered because evidence is dated by nature and its purpose ends when the measurement is retaken."
+    decided_by: igor.tadic
+    decided_on: "2026-08-28"
+
+# ── every generated surface, and what guards it ──────────────────────────────────────
+#
+# **A generated file that nothing regenerates and nothing guards is the worst of both**: it reads as
+# derived and is maintained by hand.
+#
+# `C135` requires each entry to name a generator that exists and a guard that is a registered check. **The
+# list is here because no other registry owns it** — that is this file's whole remit.
+
+generated_surfaces:
+  - path: .github/know-how/
+    generator: .github/scripts/know-how.mjs
+    guard: C41
+    from: specifications/definitions/know-how/
+
+  - path: .github/artifact-fields.yaml
+    generator: .github/scripts/artifact-fields.mjs
+    guard: C73
+    from: "§6 of specifications/PILOT-BUSINESS-LOGIC.md"
+
+  - path: .github/could-not-verify.yaml
+    generator: .github/scripts/unverified.mjs
+    guard: C72
+    from: the gate model in .github/scripts/gates.mjs
+
+  - path: .github/composed-behaviours.yaml
+    generator: .github/scripts/floor.mjs
+    guard: C45
+    from: COMPOSED_FLOOR in .github/scripts/gates.mjs
+
+  - path: .github/COVERAGE-CHECKS.md
+    generator: .github/scripts/register.mjs
+    guard: C44
+    from: "the cards in checks.yaml, §7.4, gates.mjs, check.mjs and shapes.yaml"
+
+  - path: specifications/REGMAP.md
+    generator: .github/scripts/regmap.mjs
+    guard: C119
+    from: .github/registry/regmap.yaml plus the skill bindings
+
+  - path: specifications/CONTENT-REGISTER.md
+    generator: .github/scripts/content-register.mjs
+    guard: C135
+    from: every registry, plus this file
+
+  - path: ".github/store/S1-competitors.md"
+    generator: .github/scripts/store.mjs
+    guard: C74
+    # **`corpus`, because the store is derived from committed runs and never from the configured runs
+    # root.** `store.mjs` writes `.github/store/S1-competitors.md` from the committed example runs and the
+    # runs a person keeps (none has been kept yet), whose competitor records are copied into the committed
+    # `.github/store/corpus` first; a live run nobody keeps never enters a file that ships. The path carries no
+    # `{runs_root}`, so the root changes nothing about where `C135` looks for the file.
+    root: corpus
+    from: the competitor cards of the committed example runs and of the runs a person keeps
+    note: "**No entry here names `fixtures/`.** The runs root is a setting, so the store is written under `.github/store/`, which is committed and is not a run, and a skill can name it without naming a root."
+
+  - path: .github/OPERATING-A-RUN.md
+    generator: .github/scripts/operator.mjs
+    guard: C144
+    from: the workflow contracts, the gate model, the scripts register and the run tree
+
+  # ── r1.9 · H3 §5.8 ── **`in_release_only`, because this surface exists in a release copy and nowhere else.** The
+  # release tool writes it after the competitor store is rebuilt, so it lists exactly what ships; a list in the product
+  # repository would describe a tree no tester holds. `C135` does not ask for it on disk here, and `C189` reads it in a
+  # tester's copy, where a copy with none says it was not made by a release.
+  - path: .github/release-files.json
+    generator: .github/scripts/release-files.mjs
+    guard: C189
+    from: every file under .github/ and .vscode/ in the release copy, and the release in .github/build
+    in_release_only: true
+
+  - path: "{runs_root}/{run_id}/README.md"
+    generator: .github/scripts/run-readme.mjs
+    guard: C79
+    from: the run's own record
+    per_run: true
+
+  - path: "{runs_root}/{run_id}/read/7-initiative/initiative.md"
+    generator: .github/scripts/reading-copy.mjs
+    guard: C96
+    from: A14, with its machine record stripped
+    per_run: true
+
+# ── the documents this register owns ─────────────────────────────────────────────────
+#
+# `generated: true` requires a generator and the check that guards it, because a generated file that
+# nothing regenerates and nothing guards is the worst of both: it reads as derived and is maintained by
+# hand.
+
+# `release` is the build a hand-written document was last read against. Move it when you have read the document
+# against a new build, whether you changed it or not, and quote it, so 1.10 is not read as 1.1. Where the document
+# carries its own `**Release:**` line, the two are the same value. `C135` refuses a hand-written document with no stamp,
+# a stamp that is not a release or is past the release `.github/build` is being prepared for, and a text line that
+# disagrees with its stamp. The release tool lists every document stamped behind the build it ships, and refuses the
+# release for them once that refusal is switched on. A generated document takes no stamp: its generator and its guard
+# keep it current. The pinned governing documents take none either, since `C174` holds each to its stated version.
+documents:
+  - path: specifications/PILOT-BUSINESS-LOGIC.md
+    purpose: "The parent contract. Stages, agents, artifacts, gates, checks, scoring and conformance — the source of truth for the build."
+    owner: igor.tadic
+    generated: false
+    release: "1.16.1"
+    read_by: [C42, C44, C46, C64, C73, C132, C135, C156, check.mjs through the field declarations, whoever changes the build]
+
+  - path: specifications/onboarding/KNOW-HOW-OWNERS.md
+    purpose: "Who keeps each area of know-how: Česká spořitelna owns every area and names the person at ČS for each; the bodies and registries in each area, where their sources live, and how a change is made."
+    owner: "Česká spořitelna"
+    generated: false
+    release: "1.14"
+    read_by: [the person at ČS who keeps an area of know-how, the business owner at ČS who names them]
+    note: "**The person column is empty until ČS fills it in.** Nobody outside ČS holds an area, and nobody holds one on ČS's behalf meanwhile."
+
+  - path: specifications/onboarding/TESTER-GUIDE.md
+    purpose: "What a tester needs beside SETUP.md and the testing scenarios pack: what they can and cannot establish, the provider and the agent list, how a stage goes, what correct behaviour looks like at each of the seven stages, the one probe the pack does not carry, what to record, what to do when it breaks, and what to report the same hour."
+    owner: igor.tadic
+    generated: false
+    release: "1.16.1"
+    read_by: [a tester at ČS, the person coordinating the dry run, C161]
+    note: "**The scenarios themselves are in the testing scenarios pack.** `C161` reads this file for the provider step and the report-immediately trigger, because a setup control that passes the same way on the wrong surface voids every question the guide asks."
+
+  - path: specifications/stage-specs/README.md
+    purpose: "The way in to stage-specs/. What a stage specification is, the thirteen-part shape stage 4's uses as the template, and how one is kept current."
+    owner: igor.tadic
+    generated: false
+    release: "1.14"
+    read_by: [whoever revises a stage specification]
+    note: "**It carries the instruction that decides whether a specification is worth writing**: a spec written from the rules reproduces the rules, so a spec is written from the runs."
+
+  - path: specifications/stage-specs/STAGE-2-SPEC.md
+    purpose: "Stage 2 in enough detail to build it: the four steps and the boundary each sits behind, the derived trust tag, the G2 gate and who signs it, the five hard stops, and why one agent carries a step that holds no tools."
+    owner: igor.tadic
+    generated: false
+    release: "1.14"
+    read_by: [whoever builds or revises stage 2]
+    note: "**The quarantine is this stage's whole reason for being shaped as it is.**"
+
+  - path: specifications/stage-specs/STAGE-3-SPEC.md
+    purpose: "Stage 3 in enough detail to build it: the four steps including the bridge declared with no tools and owning no position, the source floor, the store, and the gate that is the stage's only reader."
+    owner: igor.tadic
+    generated: false
+    release: "1.14"
+    read_by: [whoever builds or revises stage 3]
+    note: "**The stage has no human gate by decision**, so Q3 is the whole of its acceptance and its three guardrails are decided by no check."
+
+  - path: specifications/stage-specs/STAGE-5-SPEC.md
+    purpose: "Stage 5 in enough detail to build it: one stage with two halves and two decisions, why stage 4's distinctness rule deliberately does not apply, the option ceiling that is the person's and the three that are the producer's, and why the option is chosen as a recorded decision."
+    owner: igor.tadic
+    generated: false
+    release: "1.14"
+    read_by: [whoever builds or revises stage 5]
+    note: "**The only stage in the workflow carrying two human decisions**, which is also the shape that can deadlock it."
+
+  - path: specifications/stage-specs/STAGE-6-SPEC.md
+    purpose: "Stage 6 in enough detail to build it: six inputs into the run's largest synthesis, why the agreed PRD is a different artifact rather than a status, the two loop bounds and why they differ in kind, and the alignment statement."
+    owner: igor.tadic
+    generated: false
+    release: "1.14"
+    read_by: [whoever builds or revises stage 6]
+    note: "**The agreed PRD is assembled from the mark rather than before it**, so the bytes stage 7 reads are the bytes somebody signed."
+
+  - path: specifications/stage-specs/STAGE-7-SPEC.md
+    purpose: "Stage 7 in enough detail to build it: the thirteen-section template ČS owns rather than this project, the language rule and the check that counts function words, and the propagation binding that has never run."
+    owner: igor.tadic
+    generated: false
+    release: "1.14"
+    read_by: [whoever builds or revises stage 7]
+    note: "**The smallest gate in the workflow**, because the stage synthesises nothing: most of what could go wrong here went wrong earlier."
+
+  - path: specifications/stage-specs/STAGE-4-SPEC.md
+    purpose: "Stage 4 in enough detail to build it: the eight steps, the eight sections of an idea and what each must cite, the 128-question compliance sweep, what replaces scoring, the gate as floors, the decision, the bounds, and what the build has to change to get there."
+    owner: igor.tadic
+    generated: false
+    release: "1.14"
+    read_by: [whoever builds or revises stage 4]
+    note: "**Part 12 carries what the build does not yet do**, each gap stated in the part it concerns. It and PILOT-BUSINESS-LOGIC.md both describe the latest release, and where either disagrees with the build, that document is the defect. The reasoning behind it is deliberately not here."
+
+  - path: specifications/stage-specs/STAGE-1-SPEC.md
+    purpose: "Stage 1 in enough detail to build it: what the brief commits the run to, what it refuses to infer, the nine bodies its producer holds and what each is for, and what an absent input does."
+    owner: igor.tadic
+    generated: false
+    release: "1.14"
+    read_by: [whoever builds or revises stage 1]
+    note: "**Written from a live run's stage 1 rather than from the rules alone.**"
+
+
+
+  - path: specifications/BUSINESS-LOGIC-OVERVIEW.md
+    purpose: "The workflow explained for anyone who did not build it: what each stage does and why the order holds, without the machinery. The tester guide is written on top of it, so that the guide and the overview cannot come to describe seven stages two different ways."
+    owner: igor.tadic
+    generated: false
+    release: "1.14"
+    read_by: [a tester, the business owner, engineering, C147, C158]
+    note: "**The document a reader opens first**, so what it says is compared with the build: `C147` reads its counts against the registries and `C158` reads its stage diagram against the workflow contracts."
+
+  - path: specifications/COMPLIANCE-REQUIREMENTS.md
+    purpose: "The business requirements for compliance in the workflow, anchored to moments rather than stages so the workflow can be rebuilt underneath them. CR-A to CR-G."
+    owner: igor.tadic
+    generated: false
+    release: "1.14"
+    read_by: [whoever changes the compliance screen or its bindings]
+
+
+  - path: specifications/REGMAP.md
+    purpose: "The signpost for regulatory knowledge: four areas, which body carries each, which dossier holds the evidence, and thirty-three named regimes with their status."
+    owner: igor.tadic
+    generated: true
+    generator: .github/scripts/regmap.mjs
+    guard: C119
+    read_by: [a person asking where regulation lives, C119]
+
+  - path: specifications/DOCUMENTATION.md
+    purpose: "The signpost. Every document a person can read, in reading order, split into the ones written by a person and the ones a script produces from a source of record, with what regenerates each and what fails if it is edited by hand."
+    owner: igor.tadic
+    generated: true
+    generator: .github/scripts/signpost.mjs
+    guard: C173
+    from: specifications/documents.yaml
+    read_by: [a person arriving, anybody about to edit a document, C173]
+    note: "**CONTENT-REGISTER says what the build is made of and this says what to read.** They are different jobs and this one carries the distinction that costs an editor a red build: some of these files are written and some are produced, and editing one of the second kind is undone the next time anything regenerates."
+
+  - path: specifications/CONTENT-REGISTER.md
+    purpose: "What this build is made of, joined from the registries that already hold it: stages, agents, skills, artifacts, checks, know-how, generated surfaces and these documents."
+    owner: igor.tadic
+    generated: true
+    generator: .github/scripts/content-register.mjs
+    guard: C135
+    read_by: [a person arriving, a person auditing, C135]
+
+  - path: specifications/definitions/area.md
+    purpose: "The area the pilot lives in: its shared knowledge, its roster of agents and the governance every binding in it carries."
+    owner: igor.tadic
+    generated: false
+    release: "1.14"
+    read_by: [C90]
+
+  # `C90` reads only this page's Blueprint pin. `C47` checks each binding's pattern against the `PATTERNS`
+  # list in `gates.mjs`, which is kept by hand beside this page, so a pattern added here is added there too.
+  - path: specifications/definitions/PATTERN-CATALOGUE.md
+    purpose: "The execution shapes a skill or workflow may declare, and what each one requires. Extends the Agent Blueprint's five rather than redefining them."
+    owner: igor.tadic
+    generated: false
+    release: "1.14"
+    read_by: [C90]
+
+  - path: specifications/definitions/cross-cutting/composed-behaviours.md
+    purpose: "The nine behaviours composition adds to a skill, and which of them a check actually enforces."
+    owner: igor.tadic
+    generated: false
+    release: "1.14"
+    read_by: [whoever changes the composed floor]
+
+  - path: specifications/definitions/cross-cutting/model-diversification.md
+    purpose: "The independent checker: why a producer's own family cannot judge it, and what the build does while no second family is configured."
+    owner: igor.tadic
+    generated: false
+    release: "1.14"
+    read_by: [C90, whoever configures the independent checker]
+
+  - path: specifications/definitions/cross-cutting/observability.md
+    purpose: "Records, traces, logs and metrics: what a run keeps about itself and what may be retained from a trace."
+    owner: igor.tadic
+    generated: false
+    release: "1.14"
+    read_by: [C90, whoever changes tracing or the run record]
+
+  - path: specifications/onboarding/TASKS.md
+    purpose: "Every task a person can run, what each does, and which boxes it opens. Generated from .vscode/tasks.json, which is the only place any of it is stated."
+    owner: igor.tadic
+    generated: true
+    generator: .github/scripts/task-page.mjs
+    guard: C179
+    read_by: [C179]
+
+  - path: specifications/definitions/cross-cutting/free-roam.md
+    purpose: "Which agents may be invoked outside every workflow and which may not, with the reason for each exclusion. The roster is read off agents.yaml, which decides it; what free roam is stays in PILOT-BUSINESS-LOGIC §4.3-§4.5."
+    owner: igor.tadic
+    generated: false
+    release: "1.14"
+    read_by: [C178]
+
+  - path: specifications/definitions/cross-cutting/run-state.md
+    purpose: "S2, the run's own record of where it is: the status vocabulary, the legal transitions and what a stage records when it runs."
+    owner: igor.tadic
+    generated: false
+    release: "1.14"
+    read_by: [whoever changes the run record or its writer]
+
+  - path: specifications/REPOSITORY-MAP.md
+    purpose: "How the repository is laid out for somebody opening it for the first time: what every folder holds and is for, the seven stages end to end, and each file type with a worked example of it."
+    owner: igor.tadic
+    generated: false
+    release: "1.14"
+    read_by: [a person arriving, the engineer at CS who inherits the repository]
+    note: "**It states no count in prose, deliberately.** Every number it would have stated is printed by `node .github/scripts/facts.mjs` instead, so there is nothing here for `C147` to guard and nothing to go stale. **It has no drawn companion**, because a drawing hand-kept against this file holds the same content twice and needs every folder move applied twice."

@@ -1,0 +1,932 @@
+# The check register: one card per registered check, in id order, holding the four fields a person writes: title, what, why and applies.
+# Read by register.mjs, which joins each card with where gates.mjs runs the check and what shapes.yaml says passes, writes .github/COVERAGE-CHECKS.md, and copies each why into §7.4 of the business logic.
+# Edited by hand, from the check's code, when a check is added, changed or removed. While `stubs: allowed` stands, a check may carry `stub` in place of its card.
+# Checked by `node .github/scripts/register.mjs --verify`: a card for every registered check and none for another, in id order, each field one line, a title of at most eight words, a why with no date, and §7.4 holding each why.
+
+checks:
+  C1:
+    title: "Hypotheses' evidence or unrated mark"
+    what: "Reads the hypotheses in the hypothesis set (A3) and refuses one that lists no evidence and is not marked `trust: unrated`."
+    why: "A hypothesis with no evidence that is not marked unrated reads as grounded in research when nothing supports it."
+    applies: "Every run, once the hypothesis set exists."
+  C2:
+    title: "Where hypothesis evidence points"
+    what: "Reads the evidence references on the hypotheses (A3) and refuses one whose item, read directly or through the intake observation whose id it is, is no item `ref` of the problem material (A2), or is an item carrying `superseded_at` or `removed_at`."
+    why: "Evidence pointing outside the problem material, or at material replaced or taken back, makes a hypothesis look grounded in what the run never held or no longer holds."
+    applies: "Every run, once the hypothesis set exists."
+  C3:
+    title: "Traces on synthesis elements"
+    what: "Reads the traces on the standards, patterns and trends of the competitive synthesis (A7) and refuses an element with no trace, an empty or non-text trace, and a trace in identity-key form (a lowercase dotted domain, or text whose part before its first colon is direct, adjacent or substitute) that is no card's identity key in the competitor deep-dive (A6); other text is taken as a named source."
+    why: "A synthesis element with no trace, or citing a card that does not exist, enters the synthesis from research the run cannot show, and stage 4 builds solutions on it."
+    applies: "Every run, once the competitive synthesis exists."
+  C4:
+    title: "Counts of solutions and MVP options"
+    what: "Counts the solutions in the solution set (A8) and the options in the MVP options (A10), and refuses fewer than 3 solutions or more than the ceiling, and fewer than 2 or more than 6 options."
+    why: "Fewer than three solutions or two options leaves nothing to compare, and more than the ceiling is a list a person cannot weigh at the choice."
+    applies: "Runs holding a solution set or MVP options. The solution ceiling, read off the set's produced date (or assembled date where none), is 10 from 2026-09-08, 12 on 2026-09-07, and 7 before or with neither date."
+  C5:
+    title: "What the solutions bind"
+    what: "Reads `solves` and `supported_by` on the solutions in the solution set (A8), and refuses an empty one, an opportunity id not placed in the prioritised opportunities (A4), and an element id that is no standard's, pattern's or trend's key or id in the competitive synthesis (A7)."
+    why: "A solution bound to no opportunity or no market finding answers nothing stage 2 or 3 found, and unnamed synthesis elements let every binding pass unread."
+    applies: "Every run, once the solution set exists. Opportunities are compared only where the prioritised opportunities place any, and elements wherever the synthesis holds any."
+  C6:
+    title: "The run id on documents"
+    what: "Reads the `run_id` on the run's documents and refuses one that differs from the name of the run's folder."
+    why: "A document that does not carry its run's id cannot be tied to that run, so material from another run could be read as this one's."
+    applies: "Every run."
+  C7:
+    title: "Blank compliance touchpoints"
+    what: "Reads the compliance touchpoints listed on the solutions (A8), the expanded MVP (A11), the PRD draft (A12) and the agreed PRD (A13), and refuses an empty or blank one."
+    why: "A blank touchpoint reads as a compliance concern identified and addressed when nothing is written for it."
+    applies: "Every run, once a solution set, an expanded MVP or a PRD exists."
+  C8:
+    title: "Research dates on competitor cards"
+    what: "Reads `researched_at` on the entries the landscape map (A5) reuses from the competitor store and on the competitor cards (A6), and refuses an entry or a card where it is empty."
+    why: "A card that does not show when it was researched cannot be told fresh from stale."
+    applies: "Every run, once the landscape map or the cards exist."
+  C9:
+    title: "Competitor cards' age against freshness thresholds"
+    what: "Compares the date a competitor card (A6) was researched with the cards' produced date, and refuses a card researched more than 365 days before if its participant is adjacent or a substitute, or more than 180 days before for another type; a card without the date is not read."
+    why: "A card past its threshold carries research the market may have moved past, read as current."
+    applies: "Every run, once the deep-dive cards exist. The reference is the cards' produced date."
+  C10:
+    title: "The brief's required fields"
+    what: "Reads the seven required fields of the initiative brief (A1) (title, product manager, topic, outcome, goals, customer segment, market scope) and refuses one that is absent, an empty string or an empty list and not named in its unknowns."
+    why: "A brief missing a required field with nothing saying it is unknown reads as complete, and every later stage builds on what it leaves out."
+    applies: "Every run, once the brief exists. A brief whose produced date is before 2026-08-27 may carry the product manager under its earlier field name."
+  C11:
+    title: "The selected solution and its reason"
+    what: "Reads the selected solution (A9) and its G4 decision, and refuses a top-level `idea_id`, a decision selecting nothing or a solution outside the set, and, once stage 4 is accepted, a missing decision, a selection no standing choice records, a `Why this one` not containing the recorded reason (spacing aside), and an empty section."
+    why: "Stage 5 builds on the selected solution, so a selection that is missing, doubled, or written without the person's reason and sections leaves it nothing sound to build on."
+    applies: "Every run, once the selected solution exists. The standing choice, the reason and the sections are asked only of a selected solution whose assembled date (or produced date where none) is on or after 2026-09-16; one dated earlier or not at all is checked for its selection alone."
+  C12:
+    title: "The chain from delivered work to problems"
+    what: "Follows the chain from the delivered work back to the problems and refuses a break, such as an expanded MVP (A11) whose sources lack A9, a selected solution binding no placed opportunity, a PRD requirement whose `traces_to` does not name A11, or an initiative (A14) whose `traces_to` lacks one of A13, A11, A9, A4 and A2 or names one the run does not hold."
+    why: "A break anywhere in the chain leaves delivered work that cannot be shown to answer a problem the run started from."
+    applies: "Runs holding the expanded MVP or the initiative document."
+  C13:
+    title: "Agreement on the PRD draft and agreed PRD"
+    what: "Reads the PRD draft (A12) and the agreed PRD (A13), and refuses a draft whose agreement block holds a name or date, or whose body carries the words agreement block, agreement_block or blok souhlasu on any line, or opens a section headed Agreement or Souhlas, a missing agreed PRD, an agreement block without a name or date or differing from the run record's, and an agreed PRD whose title carries a draft marker."
+    why: "The agreed PRD is the draft copied word for word, so anything the draft says about its own agreement contradicts the agreed copy, and an agreement that differs from the record, or a title still marked draft, misleads its reader."
+    applies: "Every run, once stage 6 has written a PRD. The draft's text and the agreed PRD's title are read only on a document whose assembled date is on or after 2026-09-17; the name and date are compared with the record only where it holds an agreement."
+  C14:
+    title: "Decision records marked as an agent's"
+    what: "Reads the decision records on the run's documents and refuses one marked `by_agent: true`."
+    why: "A decision record marked as an agent's records an approval, agreement or selection that no person made."
+    applies: "Every run."
+  C15:
+    title: "The option the expanded MVP expands"
+    what: "Reads the `option_id` of the expanded MVP (A11) and refuses one missing or a list, missing MVP options (A10), an id that is no option's or differs from the chosen one (the stage 5 choice on the run record, or an older G5a block), a stage 5 accepted with no choice recorded, and a choice dated after the G5b acceptance."
+    why: "Expanding anything but the chosen option reopens a decision a person already made."
+    applies: "Every run, once the expanded MVP exists."
+  C16:
+    title: "The initiative document and its reading copy"
+    what: "Reads the initiative document (A14) and its reading copy, and refuses a Jira id, link or id basis that is missing, an id other than the key on the run record, a link that does not link the initiative's own id, an id basis of none_yet where the record does not read none yet, a declared section list other than the template's or a section not marked addressed, headings other than the template's in the run's language, A15 in its sources or traces, and, where the run's `read/` folder holds a copy, one that differs from what its generator writes, copies no document the run carries, or leaves the initiative's copy missing. It also reads the document's title, and refuses one opening on a bracketed key where the run records none yet, and one that does not carry the key as `[KEY]` where it has one."
+    why: "An initiative missing a part, carrying an invented key, depending on a propagation that may never run, or with a reading copy that says something else hands over a deliverable that is not what it reads as."
+    applies: "Every run, once the initiative exists. Headings are not judged on an initiative whose assembled date (or produced date where none) is before 2026-09-14; the id is compared with the recorded key, and the reading copy read, on runs started on build 1.10 or later; the title is read on runs started on build 1.16 or later; an id basis of none_yet is compared with the record on every run."
+  C17:
+    title: "Authorship marks against the edit account"
+    what: "Reads the `modified_by` mark on the run's documents against the edit account (`notes/marked-edits.md`), and refuses a mark other than agent or human, a document the account names as a person's edit marked agent, and one marked human with no account there."
+    why: "A document marked as a person's edit with nothing accounting for it, or edited by a person and marked an agent's, misstates who wrote what a reader is asked to trust."
+    applies: "Every run. A human mark needs an account only on a document whose assembled date (or produced date where none) is on or after 2026-09-13, that a person did not supply and whose contract names no person as producer; the agreed PRD is covered by its draft's account."
+  C18:
+    title: "Documents' external sources field"
+    what: "Reads the run's documents and refuses one with no `external_sources` field; an empty list passes."
+    why: "A document with no external-sources field has no place that says which of its claims came from outside the run, so a reader cannot tell them from the run's own evidence."
+    applies: "Every run."
+  C19:
+    title: "Document statuses"
+    what: "Reads the `status` of the run's documents and refuses one outside the shared status vocabulary."
+    why: "A status outside the shared words cannot be compared with its stage's, so the document's state on the record means nothing."
+    applies: "Every run."
+  C22:
+    title: "The workflow a document records"
+    what: "Reads the `workflow` of the run's documents and refuses an unregistered workflow, or, on a document that is not free-roam, one other than the workflow of its producing skill; the skill is matched as written, so a name carrying a version, such as `ideation@0.1`, is not compared."
+    why: "A document recorded under a workflow that did not produce it misstates which gates its content passed through."
+    applies: "Every run."
+  C23:
+    title: "The free-roam mark on derived documents"
+    what: "Follows the `sources` of the run's documents and refuses a document whose sources lead to one marked `workflow: free-roam` without `free_roam_derived: true`, and one declaring it whose sources lead to none."
+    why: "A document derived from material that passed no gate, carrying no mark of it, passes unchecked material off as governed."
+    applies: "Runs holding free-roam material, or a document that declares it is derived from some."
+  C24:
+    title: "Free-roam output in the competitor store"
+    what: "Reads the documents declaring `store: S1` and refuses one marked `workflow: free-roam`."
+    why: "The competitor store outlives every run and nobody approves what enters it, so unchecked research written there would be inherited as governed."
+    applies: "Runs holding a document that writes to the competitor store."
+  C25:
+    title: "Adoption records for free-roam material"
+    what: "Reads the free-roam documents other documents name as sources, and the adoption records on the run record, and refuses an adopted document (a free-roam document another document names as a source) whose first adoption record is missing, not marked `by_agent: false`, or without `decided_by`, `decided_at` or a choice of run_only, both or free_roam_only, and a record for a document that is not free-roam."
+    why: "Adopting free-roam material is a person's decision, and one with no record cannot be read or questioned afterwards."
+    applies: "Runs that adopted free-roam material or record an adoption."
+  C26:
+    title: "Top-priority opportunities the solutions address"
+    what: "Reads which primary opportunities (A4) the solutions in the solution set (A8) address, and refuses a set addressing fewer than two of them, or, where one is primary, not addressing it."
+    why: "A set where every solution addresses the same opportunity is one bet rather than a comparison of ways forward."
+    applies: "Every run, once the solution set and the prioritised opportunities exist. A set whose produced date (or assembled date where none) is before 2026-09-07, or that has neither, must address the primary opportunities, all of them, instead."
+  C27:
+    title: "Placement of the prioritised opportunities"
+    what: "Reads the primary, secondary and parked lists of the prioritised opportunities (A4) and refuses fewer than 1 or more than 3 primary, more than 5 secondary, an id placed twice, and a framed opportunity (or, with no framing, a hypothesis) placed nowhere."
+    why: "An opportunity placed twice or nowhere, or a primary list too long to act on, gives stage 4 a priority order that misstates what stage 2 found."
+    applies: "Every run, once the prioritised opportunities exist."
+  C28:
+    title: "Documents' opportunity-tree roles"
+    what: "Reads the `ost_role` of the run's documents and refuses one outside the five opportunity-tree roles, or other than the role the business logic's document register (§6.1) gives the document."
+    why: "A document carrying the wrong place in the opportunity tree misplaces it in the chain a reader traces from outcome to solution."
+    applies: "Every run."
+  C29:
+    title: "Retention of stale, superseded and parked material"
+    what: "Reads what the run record marks stale or lists under a superseded stage, and the ids parked in the prioritised opportunities (A4), and refuses a document no longer in the run and a parked id missing from the framing (A3b), or from the hypothesis set where there is none."
+    why: "Material deleted rather than retained cannot be audited later, and a parked opportunity that disappears cannot be reconsidered."
+    applies: "Every run with a run record."
+  C30:
+    title: "Acceptance of stale inputs"
+    what: "Reads the stale inputs on the run record and refuses one that is neither marked rebuilt nor carries a non-blank `accepted_by` and `accepted_at`."
+    why: "Advancing past stale material is a person's decision, and one nobody recorded reads as nothing being stale."
+    applies: "Runs whose record marks an input stale."
+  C31:
+    title: "Alignment statements on the PRDs"
+    what: "Reads the PRD draft (A12) and the agreed PRD (A13) and refuses one whose `alignment_validation` statement is empty."
+    why: "The second alignment pass is the last point the narrowed MVP is checked against the strategy, and a PRD without it reaches agreement with the check unrecorded."
+    applies: "Every run, once stage 6 has written a PRD."
+  C32:
+    title: "Overridden quality gates"
+    what: "Reads the quality gates on the run record and refuses one carrying `override: true`, `by_agent: true`, `by_human: true` or an `overridden_by`."
+    why: "A quality gate that a person or an agent can wave through is not a control."
+    applies: "Runs with at least one recorded quality gate."
+  C33:
+    title: "Problem material items and their labels"
+    what: "Reads the items of the problem material (A2) and refuses material with no items, an item whose `arrival` is not file or conversation, a `research` label other than synthetic, human or not_stated, and a synthetic or human label with an empty `provenance`."
+    why: "Material with no items, or items whose arrival or kind of research is unstated or asserted without its source, lets a reader take invented or unclear material for customer research."
+    applies: "Every run, once the problem material exists. The words behind a synthetic or human label are asked only on runs started on build 1.4 or later."
+  C34:
+    title: "Who supplied and wrote the problem material"
+    what: "Reads the problem material (A2) and refuses `supplied_by` other than user, `modified_by` other than human, and a `produced_by` naming an agent or a skill."
+    why: "Problem material an agent wrote is not evidence of a customer's problem, and an agent writing it would be producing its own evidence."
+    applies: "Every run, once the problem material exists."
+  C35:
+    title: "Intake observations between evidence and material"
+    what: "Reads the intake observations (A2b), the hypotheses' evidence and the problem material's items, and refuses an observation whose `ref` is no item's or an item no longer in use, evidence that is neither an observation's `ref` nor its `id`, and an item in use carrying `added_at` whose `ref` no observation carries."
+    why: "Evidence that skips the intake record, or an observation pointing at missing, replaced or unread material, breaks the line from a hypothesis back to what a customer said."
+    applies: "Every run, once the hypothesis set exists."
+  C36:
+    title: "Producers named on documents"
+    what: "Reads the producer the run's documents name and refuses an unregistered agent, a skill that is not one of that agent's (a version suffix allowed), and no producer where the contract names an agent."
+    why: "Work attributed to an agent or skill that does not produce it cannot be traced to the instructions and rules it ran under."
+    applies: "Every run. A document naming no producer is held to its contract only when its assembled date (or produced date where none) is on or after 2026-09-04; a renamed agent or a retired skill passes on work whose produced date is before the change."
+  C37:
+    title: "Observations' origin keys and dates"
+    what: "Reads the intake observations (A2b) and refuses one with no `origin_key`, one marked complete whose origin is unestablished, and one marked complete dated neither by a full date nor by a period the person confirmed for its file."
+    why: "Without an origin key two descriptions of one source count as two and a weak hypothesis rates strong; a period nobody confirmed dates research the run cannot date."
+    applies: "Every run, once the intake record exists. A date that is not a full date is read only on runs started on build 1.11 or later."
+  C38:
+    title: "The run record against the documents"
+    what: "Reads the run record (RUN-STATE.md) against the run's documents and refuses a missing record, or one disagreeing with them or itself, such as a `run_id` other than the folder's, a document no stage lists other than supplied material or free-roam output, a stage accepted over a gate that did not pass and nobody signed, a decision dated before its gate, or a move dated after the stop."
+    why: "A run record that disagrees with the documents or with its own dates is no evidence that a stage passed the gates that admit it."
+    applies: "Every run; a run with no record cannot pass it. Each decision on a stage's list is compared with its quality gate's date only on runs started on build 1.10 or later."
+  C39:
+    title: "Observations' proximity"
+    what: "Reads the intake observations (A2b) and refuses a proximity other than first_hand, relayed, aggregated or unestablished, and an unestablished origin with another proximity."
+    why: "With no proximity nothing counts as first-hand, so every hypothesis grades weak in a run that looks graded and is not."
+    applies: "Every run, once the intake record exists."
+  C40:
+    title: "Decision records against the run record"
+    what: "Reads the decision records on the run's documents against the run record, and refuses faults such as a record missing `gate`, `accepted_by`, `accepted_at` or `changed_during_refinement`, `none` there beside recorded rounds, a stage accepted without the record its gate takes, round counts differing from the run record's, and an agreed PRD differing from its draft before its decision."
+    why: "A decision record that lacks a field, disagrees with the run record, or narrates a change the documents do not show leaves no trustworthy account of what a person decided and changed."
+    applies: "Runs holding a decision record, a stage accepted at a decision gate, or both PRDs. A revision count, and the bound it sets on the rounds, is asked only where the quality gate of the stage listing the document has a run date before 2026-09-14, or none; the agreed PRD's text is compared word for word only when its assembled date is on or after 2026-09-17 and the run record holds the agreement."
+  C41:
+    title: "Know-how copies against their sources"
+    what: "Compares the know-how bodies agents read (`.github/know-how`) with what the generator writes from their sources (`specifications/definitions/know-how`), and refuses a body that differs or is missing, a body with no source, and two sources sharing a file name."
+    why: "A know-how copy edited by hand, or left behind when its source changed, gives agents rules nobody approved."
+    applies: "The repository, at every run of the repository checks."
+  C42:
+    title: "Fields the example runs carry"
+    what: "Compares the business logic's document schemas (§6) with its document register (§6.1), and the example runs' documents and records with §6, and refuses a document one of the two names and the other does not, a run document or record whose id has no schema, and a front-matter key, at any depth, that neither the document's own schema, the envelope, the decision record nor the delegated know-how fields declare."
+    why: "A field nothing declares is one no producer is told to write and no check reads, so it carries meaning nobody can rely on."
+    applies: "The repository, at every run of the repository checks."
+  C43:
+    title: "A derived rule's named source"
+    what: "Reads the market standards and the evidence standards, and refuses market standards that no longer name Evidence Standards §4, evidence standards without the section `## 4. Independence`, and no mention of source of record in the 2,000 characters from that section's heading."
+    why: "A rule restated in a second body without naming its source drifts from the original, and both are read as authoritative."
+    applies: "The repository, at every run of the repository checks."
+  C44:
+    title: "Workflow contracts against the build"
+    what: "Compares the workflow contracts with the build and refuses a contract whose workflow, gate checks, step agents, skills, composed workflows or built skills disagree with it, a document register whose decision gates do not match its document classes, and a stage seeded for new runs with documents other than the contracts produce."
+    why: "A contract that disagrees with the gate model or the bindings describes a workflow the build does not run, and a run seeded from it lists documents nothing writes."
+    applies: "The repository, at every run of the repository checks."
+  C45:
+    title: "Checked behaviours' named enforcement"
+    what: "Compares the behaviour floor carrier (`.github/composed-behaviours.yaml`) with its generator, and refuses drift and a behaviour marked checked whose named enforcement does not exist: a check the run checker does not implement, or an empty mechanism."
+    why: "A behaviour marked checked by a check that does not exist reads as enforced when nothing enforces it."
+    applies: "The repository, at every run of the repository checks."
+  C46:
+    title: "The stage transition graph"
+    what: "Reads the stage transition graph and refuses one that is not well formed (its statuses, its terminal state, reachability, which acceptances need a person), a person's move with nothing named to enforce it, in it or the run graph, a run-state writer keeping its own copy, and a business logic §7.3 table that differs from it."
+    why: "A transition graph with an unreachable state, a second copy, or a person's move nothing enforces lets a run's record move in ways the workflow does not allow, unseen."
+    applies: "The repository, at every run of the repository checks."
+  C47:
+    title: "The agent and skill registries"
+    what: "Reads the agent and skill registries and refuses a malformed entry (fields, version pins, patterns, model family or model, a `method` field on an agent), a disagreement between the two registries or with the gate model's copies of the bindings, judged rules and parked skills, a live mechanical rule in the gate model naming no check or one the run checker does not implement, and a malformed question to a person."
+    why: "Registries that disagree with each other or with the gate model let a gate judge against a roster or rules the agents do not run, and count a rule as checked when nothing checks it."
+    applies: "The repository, at every run of the repository checks."
+  C48:
+    title: "Discovery's step connections and assurance block"
+    what: "Reads the discovery workflow contract and refuses a missing assurance block, tier or status, a goal tier graded without its evaluation suite on disk, a step requiring a document no earlier step produces, and a stage from 2 to 7 not built on the stage before it."
+    why: "A step requiring what no earlier step produces, or a goal tier graded with no suite behind it, describes a workflow that cannot run as written, and staleness would miss a stage built on a re-run one."
+    applies: "The repository, at every run of the repository checks."
+  C49:
+    title: "Assurance subjects' cadence and currency"
+    what: "Reads the assurance register against today's date and git, and refuses a subject outside its five, a subject missing its cadence, maximum interval, owner or state, a maximum interval not written as Nd or monthly, a state other than current, withdrawn or not_performable, one not current with no reason, a subject declaring itself current that is undated, past its interval or older than the configuration its proof covers, and a quality gate the enforcement-points subject does not list."
+    why: "An assurance subject past its interval that still declares itself current is a control in writing only."
+    applies: "The repository, at every run of the repository checks."
+  C50:
+    title: "The independent checker's declaration"
+    what: "Reads the independent checker in the assurance register and refuses a state other than configured or absent, absent with no `absent_reason` line, configured on an unregistered model family or on one a producer uses, a verdict intake named and not on disk, and no authority to block a step."
+    why: "A checker on the producers' own model family agrees with them, and one that cannot block a step is not a control."
+    applies: "The repository, at every run of the repository checks."
+  C51:
+    title: "Agents named on gates and decisions"
+    what: "Reads the run record and refuses a quality gate with an empty `run_by`, and a `run_by`, `decided_by`, standing decision's or refinement's `by`, `accepted_by`, `abandoned_by` or stage owner's name that names a registered agent or skill that produces work."
+    why: "A gate or decision recorded in the name of an agent that produces work would let the producer approve its own output."
+    applies: "Every run whose record holds a quality gate, or names someone in a decision gate's `decided_by`, a standing decision's or refinement's `by`, `accepted_by`, `abandoned_by` or a stage owner's name."
+  C52:
+    title: "Trust tags against the evidence arithmetic"
+    what: "Recomputes the trust tags in the hypothesis set (A3) from the cited intake observations by the evidence standard's arithmetic, and refuses a tag that differs, and a complete observation without the origin key or proximity the arithmetic needs."
+    why: "A trust tag written rather than derived can rate a hypothesis strong on references that share one origin, however confident its rationale."
+    applies: "Every run, once both the intake record and the hypothesis set exist."
+  C53:
+    title: "Ids placed among prioritised opportunities"
+    what: "Reads the ids placed in the prioritised opportunities (A4) and refuses one that is not a framed opportunity (A3b) of this run, or a hypothesis (A3) where the run has no framing."
+    why: "A placed id that names nothing in the run prioritises something with no evidence behind it, and every later binding resolves against it."
+    applies: "Every run, once the prioritised opportunities and the hypothesis set or framing exist."
+  C54:
+    title: "Map participants' keys and types, cards' joins"
+    what: "Reads the participants on the landscape map (A5) and the competitor cards (A6), and refuses a participant with no identity key, a repeated one or one that is neither a domain nor its own type followed by a colon, a type other than direct, adjacent or substitute, and a card whose key matches no participant."
+    why: "An untyped participant has no freshness threshold, a malformed key can never match a publisher, and a card no participant claims is research the map does not account for."
+    applies: "Every run, once the landscape map exists."
+  C55:
+    title: "Deep-dive decisions and reused entries' dates"
+    what: "Reads the participants on the landscape map (A5) and its reused entries, and refuses a participant with no `deep_dive` decision or an empty `reason`, and a reused entry that is a bare name or has an empty `researched_at`."
+    why: "A participant passed over in silence cannot be told from an oversight, and reused research with no date is read as new."
+    applies: "Every run, once the landscape map exists."
+  C56:
+    title: "Standards' participants and unanswered opportunities"
+    what: "Reads the standards and absences of the competitive synthesis (A7) against the prioritised opportunities (A4), and refuses a standard whose participant count is unreadable or under 2, and a primary or secondary opportunity no element's `addresses` lists and no absence's `problem` names as a word of its own."
+    why: "One participant doing something is that participant and not the market, and an opportunity the market does not answer vanishes unless the synthesis records the silence."
+    applies: "Every run, once the synthesis and the prioritised opportunities exist. Where stage 3 recorded market standards 0.14 or later, a standard's participants are read from its source count, which must be readable; before 0.14, or where none is recorded, from its traces."
+  C57:
+    title: "Parked skills' documents"
+    what: "Reads the skill the run's documents name as producer and refuses one written exactly as a name on the parked list (`initiative-propagation`); a name carrying a version, such as `initiative-propagation@0.1`, is not matched."
+    why: "A parked skill has no list of approved destinations, so a document it produced would mean it ran, and reached outward, with nowhere approved to send to."
+    applies: "Every run."
+  C58:
+    title: "MVP options' differences and preferences"
+    what: "Reads the MVP options (A10) and refuses an option with an empty `differs_by`, and a `preferred`, `recommended`, `rank`, `order`, `sequence` or `priority` field on an option or on the set."
+    why: "An option set that arrives with a preference has made the choice and asks the person only to ratify it."
+    applies: "Every run, once the MVP options exist."
+  C59:
+    title: "Ranking and selection fields on solutions"
+    what: "Reads the solution set (A8) and refuses a `preferred`, `recommended`, `rank`, `order`, `sequence`, `priority` or `selected` field on a solution, and those or `selection` on the set."
+    why: "A ranked or pre-selected solution set has made the person's choice before they arrive, with nobody's name on it."
+    applies: "Every run, once the solution set exists."
+  C60:
+    title: "Publishers behind competitor cards"
+    what: "Counts the distinct publisher keys behind the competitor cards (A6) and refuses a source without one, a card below the floor, and, where the floor is above two or the market was supplied, a card whose publisher keys do not include its own identity key, unless that key holds a colon (a type and a slug) or the card carries `primary_unreachable`."
+    why: "A card resting on one party, or on accounts that never consulted the participant, presents an assertion as corroborated research."
+    applies: "Every run, once the deep-dive cards exist. The floor follows the market standards stage 3 recorded: 2 before 0.10, 6 from 0.10, 4 from 0.16 or where none is recorded, and 2 for a market a person supplied from 0.17."
+  C61:
+    title: "Know-how bodies' readers and versions"
+    what: "Reads the know-how bodies on disk and refuses one no skill binding declares, and one with no line opening `**Version:**` and a number such as 0.4."
+    why: "A body nothing reads is rules nobody follows, and a body with no version lets no run say which version it read."
+    applies: "The repository, at every run of the repository checks."
+  C62:
+    title: "Recorded know-how against the bodies"
+    what: "Reads the know-how the run's stages record against the bodies on disk and their skills' declarations, and refuses a body recorded twice, missing from disk or ahead of its version, a body owed and neither recorded nor declared not read in a valid entry, and a not-read entry for a stage the run does not have."
+    why: "A stage that records a body it never read, omits one it should have read, or claims a version that never existed misstates what its work was based on."
+    applies: "Every run; a run with no record cannot pass it. A stage pending, superseded, or running with nothing recorded is not read, and a body that landed, or was bound to the stage's skills, after the stage ran is not owed."
+  C63:
+    title: "Models the skill bindings pin"
+    what: "Reads the models the skill bindings pin and refuses one the model catalogue does not name, one retired, and one of an unregistered model family."
+    why: "A binding pinned to an unknown or retired model answers nothing, and an unregistered family defeats the comparison of checker and producer families."
+    applies: "The repository, at every run of the repository checks."
+  C64:
+    title: "The baseline register"
+    what: "Reads the baseline register and refuses a state outside its three values, no owner, no measure serving one of the two comparative success criteria, a measure with no value, with a value but no source or capture date, or unknown with no reason, a state the measures contradict, and a business logic §1.3 stamp naming another state."
+    why: "Success criteria compared against a baseline nobody captured, or one whose state contradicts its values, cannot show the pilot did better than before."
+    applies: "The repository, at every run of the repository checks."
+  C65:
+    title: "The could-not-verify list on documents"
+    what: "Recomputes the `could_not_verify` list of the run's documents from the producing skill's rules no check decides, and refuses a list missing or differing rule for rule, a document naming no skill where its contract names one, and such a list on a person's document."
+    why: "A reviewer decides on one document, and one that omits or misstates the rules nobody checked reads as more fully checked than it was."
+    applies: "Every run with a document. Rules are compared as worded on the document's assembled date (or produced date where none); a document naming no skill is held to its contract only when that date is on or after 2026-09-04."
+  C66:
+    title: "Card confidence against the standards"
+    what: "Recomputes the confidence on the competitor cards (A6) from their own sources and fields by the market standards, and refuses a confidence missing or different, a card with a source carrying no publisher key, and a card with no identity key."
+    why: "A confidence chosen rather than derived can rate thin research high, and a reader weighs the card by it."
+    applies: "Every run, once the deep-dive cards exist. Cards from a stage 3 that recorded market standards before 0.13, or none, are graded with the older third input, a gap in the card's core fields."
+  C67:
+    title: "The PRDs' template sections and requirements"
+    what: "Reads the PRD draft (A12) and the agreed PRD (A13), and refuses a template section missing, unknown, of another status or not applicable without a reason, a requirement with a statement in the record or with no heading of its own in the body, and headings other than the template's in the run's language."
+    why: "A section skipped without a reason looks decided rather than missing, and a requirement declared and not written up, or written twice, leaves a person signing a PRD that is not whole."
+    applies: "Every run, once stage 6 has written a PRD. Headings are not judged on a PRD whose assembled date (or produced date where none) is before 2026-09-16."
+  C68:
+    title: "Know-how a skill names against its declaration"
+    what: "Compares the know-how bodies a skill's instructions name by path with those its registry entry declares, and refuses a body named and not declared, or declared and not named."
+    why: "A body read without being declared escapes the record of what a stage read, and one declared but never pointed at is a body the producer does not read."
+    applies: "The repository, at every run of the repository checks."
+  C69:
+    title: "Reductions and rejections in the hypothesis set"
+    what: "Reads the reductions and rejections in the hypothesis set (A3), and refuses a `reduced_from` that is a blank string or holds an entry with no `ref`, a rejected candidate with an empty statement or reason, a statement both kept and rejected, and a reduced hypothesis whose evidence refs other hypotheses already cite in full; an empty list is no reduction and passes."
+    why: "A rewrite with no original, a rejection with no reason, or a statement kept in both lists lets a thing to build pass as a customer problem with no record a reviewer can read."
+    applies: "Every run, once the hypothesis set exists. A reduction entry naming no observation is refused only on runs started on build 1.11 or later."
+  C70:
+    title: "Scoring fields on solutions"
+    what: "Reads the solutions in the solution set (A8) and refuses a `potential`, `difficulty`, `unscored`, `score`, `scores`, `total` or `weighted` field on one, and `scores` or `scores_basis` on the set."
+    why: "A score on the solutions a person chooses between steers the choice with a number, where the choice is theirs to make."
+    applies: "Every run, once the solution set exists."
+  C72:
+    title: "The could-not-verify carrier"
+    what: "Compares the could-not-verify carrier (`.github/could-not-verify.yaml`) with its generator and reads the gate model, and refuses drift, a skill page that does not name it, and a rule the gate model marks withdrawn (`until`) that its live set still holds."
+    why: "A skill never told which of its rules go unchecked cannot list them on its document, and a withdrawn rule left live sends every skill to copy a rule the gate then refuses."
+    applies: "The repository, at every run of the repository checks."
+  C73:
+    title: "The field carrier"
+    what: "Compares the field carrier (`.github/artifact-fields.yaml`) with its generator and the example runs, and refuses drift, a skill page not naming it, and a plain-value or entry claim an example-run document contradicts; entries are read on documents with a produced date on or after 2026-08-27 (2026-08-28 for the PRDs' touchpoints), so not on an assembled one."
+    why: "A producer follows the field carrier, so one stating the wrong shape, or one a skill never names, has documents written in a shape no check expects."
+    applies: "The repository, at every run of the repository checks."
+  C74:
+    title: "The competitor store"
+    what: "Compares the competitor store (`.github/store/S1-competitors.md`) with what its generator writes from the example runs' landscape maps and cards, and from the promoted corpus (`.github/store/corpus`) where it exists, and refuses drift, a participant on those maps whose first field is not `identity_key`, and a reading skill whose page names neither the store's path nor its template path."
+    why: "A store that drifts from its runs, or that a skill cannot find, sends research to be repeated and reported as new, and a participant without its key never reaches the store."
+    applies: "The repository, at every run of the repository checks."
+  C75:
+    title: "Participants carrying a card on the map"
+    what: "Reads the landscape map (A5) and the cards behind it, and refuses a map with no participants, under 3 participants with a card (on the deep-dive or reused), and fewer than the aim with no shortfall declared (a participant the cards record as unprofiled, or one unselected on the map with a reason); the aim is 10, or a supplied list's count held between 3 and 10."
+    why: "A map that stops short reads as a market with that many players in it, and below three the synthesis cannot see where the market is heading."
+    applies: "Every run, once the landscape map exists. The card count applies where stage 3 recorded market standards 0.6 or later, or none; a supplied list sets the aim from 0.18."
+  C76:
+    title: "The egress regime on outward research"
+    what: "Reads the stage 3 documents (A5, A6, A7) that cite an external source, and refuses no egress regime or one other than approved, pilot-test, fixture and supplied, a claim of approved while the egress registry names no approved endpoint, and, for a run declared as real material, a regime the registry says does not permit it."
+    why: "Research reached through a test destination with nothing marking it enters the competitor store and is inherited by later runs as governed research."
+    applies: "Runs whose stage 3 documents cite an external source. The real-material clause applies only to a run the fixture register declares."
+  C77:
+    title: "Goals on the brief"
+    what: "Reads the goals on the brief (A1) and refuses a goal that is a bare value or lacks a product goal, metric, key result or written link, a metric that is a key-result id, a key result the Strategy Basis does not hold or cited other than as it writes it, and `unavailable` without its reason in `strategy_basis`."
+    why: "A goal that copies the company's measure, or names a key result the Strategy Basis does not hold, gives stage 4 an alignment to score that means nothing."
+    applies: "Every run, once the brief exists; a brief with no goals passes. Key results are compared with the Strategy Basis only where it is present."
+  C78:
+    title: "The stop record"
+    what: "Reads the stop fields on the run record and refuses a stopped run without `abandoned_by`, `abandoned_at` or `abandoned_reason`, a reason outside the fixed list, an `abandoned_at` that is not a date, and a run not stopped that carries a stop field or `abandoned_note`."
+    why: "A stop recorded in part, or stop fields on a run still going, leave nobody able to say whether, when or why the run was stopped."
+    applies: "Every run; a run with no record cannot pass it."
+  C79:
+    title: "Example runs' front pages"
+    what: "Compares the front pages (README.md) of the example runs with what the generator writes from their records, and refuses a missing page or one that differs."
+    why: "A front page that drifts from its run's record tells a reader something the record does not say."
+    applies: "The repository, at every run of the repository checks."
+  C80:
+    title: "Cited sources against the bibliography"
+    what: "Reads the external sources the run's documents cite and refuses a citation with no row carrying its ref in the run's bibliography (`sources.md`), or no bibliography."
+    why: "A citation that resolves nowhere looks like provenance and carries none, since a source can only be checked against what it points at."
+    applies: "Runs whose documents cite an external source."
+  C81:
+    title: "Trends on the landscape map"
+    what: "Reads the trends on the landscape map (A5) and refuses fewer than 3 or more than 5 in one of the business, technology and regulatory classes, a class outside them, and a regulatory trend without its instrument or an `effective` value."
+    why: "A market pass with no regulatory movement, or a regulation named without its instrument or date, leaves later stages unable to see what will bind the solution."
+    applies: "Every run, once the landscape map exists. A map with no trends at all is refused where stage 3 recorded market standards 0.6 or later, or none."
+  C82:
+    title: "Hypotheses' disconfirming lines, themes and kinds"
+    what: "Reads the hypotheses (A3) and refuses one whose `disconfirming` line is empty, under 25 characters or matches one of the generic caveats the check lists, one with no theme, and one whose kind is neither true nor barrier."
+    why: "A hypothesis that does not say what would overturn it cannot be tested, and a set whose kinds are unstated can promote only barriers unseen."
+    applies: "Every run whose hypothesis set holds a hypothesis, where stage 2 recorded evidence standards 0.5 or later, or none."
+  C83:
+    title: "Solutions' write-up sections"
+    what: "Reads the solution set's document body (A8) and refuses a solution without its own section, or whose section lacks an idea section in force for the set, under its heading in the run's language."
+    why: "Solutions written up in different shapes cannot be compared at the choice, and one with no account of how a customer uses it leaves stage 5 to invent it."
+    applies: "Runs whose solution set holds a solution and either has a produced date on or after 2026-08-14 or carries one of the idea sections. The sections owed are those in force on its produced date (or assembled date where none)."
+  C84:
+    title: "The synthesis verdict's four parts"
+    what: "Reads the competitive synthesis (A7) and refuses a verdict missing its diagnosis, parity, opening or risk heading in the run's language."
+    why: "A synthesis that stops at its findings leaves stage 4 to work out what the market means for the initiative, differently each time."
+    applies: "Runs whose synthesis carries a verdict section or any of the four headings."
+  C85:
+    title: "Agent wrappers against the registries"
+    what: "Compares the agent wrappers on both surfaces with the agent and skill registries, and refuses a wrapper the registries do not hold, a skill an agent owns covered by no wrapper, by two or by one not naming its page, a Claude wrapper whose `name` is not its own file name, a tool grant or skill pin not the registry's, a Copilot wrapper's description not the registry's, a path not on disk, a built skill called unbuilt, and material intake not quarantined."
+    why: "A wrapper is what an agent loads first, so one that drifts from the registry hands it tools, skills or pages nobody approved, or withholds ones it needs."
+    applies: "The repository, at every run of the repository checks."
+  C86:
+    title: "Competitor cards' profile depth"
+    what: "Reads the competitor cards (A6) in the document body and refuses a card with no section of its own, other than 5 to 10 capabilities or 3 to 5 claims (bolded lead sentences), or nothing written under its What it costs section; where stage 3 recorded market standards before 0.12, or none, the record's features, USPs and a non-empty `pricing_model` are read instead."
+    why: "A card with two features and no pricing passes as a profile while it cannot support the standards the synthesis grades the market against."
+    applies: "Runs whose stage 3 recorded market standards 0.12 or later; otherwise only runs whose cards carry features."
+  C87:
+    title: "Standards' tiers and counts"
+    what: "Reads the standards in the competitive synthesis (A7) and refuses a tier other than universal, common, emerging or rare, no readable count of the participants showing it out of a total, a count above its total, a total other than the number of competitor cards where there are cards, and a tier other than the one that share derives."
+    why: "A tier chosen rather than counted lets a minority practice reach stage 4 as table stakes."
+    applies: "Runs whose stage 3 recorded market standards 0.9 or later, or whose synthesis carries a tier. The line between emerging and rare moves at 0.14."
+  C88:
+    title: "Participants' standing and trends' representatives"
+    what: "Reads the participants and trends on the landscape map (A5), and refuses a participant other than a substitute without a standing of leader or innovator, a map whose standings hold one of the two kinds and not the other, and a trend no participant represents that is not recorded as unrepresented."
+    why: "A map of leaders only or innovators only describes half a market, and a trend nobody represents disappears unless it is recorded as unanswered."
+    applies: "Runs whose stage 3 recorded market standards 0.9 or later, or whose map carries a standing."
+  C89:
+    title: "Skill bodies against the registry and runs"
+    what: "Compares the skill bodies with their registry entries and the example runs, and refuses a body stating another stage, agent or pattern, a run path no example run holds (unless a records path, or in a stage folder while it names a retained folder or the skill produces a document no example run holds), and an output path belonging to a document it does not produce."
+    why: "A skill body is what the agent reads, so one that disagrees with the registry, or names paths no run holds, sends its output where no gate reads it."
+    applies: "The repository, at every run of the repository checks."
+  C90:
+    title: "The area document against the registries"
+    what: "Compares the area document (`specifications/definitions/area.md`) with the registries, and refuses an agent or know-how body one names and the other does not, agent and binding counts other than the registry's, and a pin on it, or on another design document under `specifications/definitions/`, to an Agent Blueprint version other than that of the blueprint file in `governing-documents/`."
+    why: "A governance document whose roster or counts disagree with the registry, or that was written against a superseded blueprint, describes an estate other than the one running."
+    applies: "The repository, at every run of the repository checks."
+  C91:
+    title: "Relative links in the example runs"
+    what: "Reads the relative links in the markdown files of the example runs and refuses one that resolves to no file."
+    why: "A link that resolves to nothing sends a reader of an example run to a page that is not there."
+    applies: "The repository, at every run of the repository checks."
+  C92:
+    title: "Trace ids documents name"
+    what: "Reads the trace ids the run's documents and records name, and refuses one that resolves to no trace the run keeps in its traces folder."
+    why: "A trace id claims that evidence exists elsewhere, and one that resolves to nothing cannot be checked."
+    applies: "Runs whose documents or their records name a trace."
+  C93:
+    title: "Agent and binding modes"
+    what: "Reads the modes the agents and skill bindings declare, and refuses a mode outside discovery and free-roam, free roam on material intake, and a wrapper that offers free roam other than as the registry gives its agent."
+    why: "A mode outside the set, or untrusted material handled outside a workflow, runs work behind no gate, and a wrapper disagreeing with the registry offers a mode nobody can reach or nobody approved."
+    applies: "The repository, at every run of the repository checks."
+  C94:
+    title: "Rule echoes against their bodies"
+    what: "Reads the rows of the rule-echo register and refuses a row missing its id, body or body_clause, and rows for one id naming different bodies or body clauses; on a row carrying `surface` and `clause`, it refuses a body or surface file not on disk, a body_clause its body no longer carries, a clause its surface no longer carries, and a forbidden wording its surface still carries."
+    why: "An instruction restating a rule the body has since changed tells the agent the old rule."
+    applies: "The repository, at every run of the repository checks."
+  C95:
+    title: "Runs on disk against git"
+    what: "Reads the runs on disk under `fixtures/` and the runs folder against git and `.gitignore`, and refuses a run id not beginning `YYYY-MM-` (four digits, a hyphen, two digits and a hyphen), a run tracked without a reasoned exception or also declared held, a run neither tracked nor held, an exception git tracks nothing under, and an exception or held line matching no run."
+    why: "A run in the tree by accident reads exactly like one put there on purpose, and a run held back for carrying client material must say why."
+    applies: "The repository, at every run of the repository checks."
+  C96:
+    title: "Example runs' reading copies"
+    what: "Compares the reading copies in the example runs with what the generator writes from their initiatives, and refuses a missing or differing copy and a file under the run's `read/` folder other than the copy the generator writes."
+    why: "The reading copy is the file a reader opens, and one saying what its document no longer says misleads them."
+    applies: "The repository, at every run of the repository checks."
+  C97:
+    title: "How documents open"
+    what: "Reads how the run's documents open and refuses one with no title or nothing under it, one whose first line under the title (after an opening block and code fences) is a heading, a quotation, a bullet line or a table row, and, where its kind is given an opening block, a block without a line under For you to judge."
+    why: "A reader who stops after the title should have the answer, and a document that opens on a heading or on how it was made buries what its approver is asked to judge."
+    applies: "Documents whose stage recorded the documentation standards at 0.1 or later. The For you to judge line is asked of the stage 2, 4, 5 and 6 documents given an opening block, on runs started on build 1.12 or later whose stage recorded the standards at 0.10 or later."
+  C98:
+    title: "Documents' closing sections"
+    what: "Reads the closing sections of the run's documents other than the two PRDs and the initiative, and refuses a missing What we could not establish or How this was produced level-2 section under those names in the run's language, How this was produced not directly after What we could not establish, and a level-2 section after them."
+    why: "Closing sections under other names cannot be read across runs, and prose after the closing pair is prose nobody reads."
+    applies: "Documents whose stage recorded the documentation standards at 0.1 or later; the PRD draft, the agreed PRD and the initiative are exempt."
+  C99:
+    title: "Headings below the title"
+    what: "Reads the headings below level 1 and refuses one numbered or carrying a document code, gate name, check id, the word stage followed by a digit, or the run's id, above the first level-2 heading How this was produced, or in a Czech run Jak to vzniklo; that heading and every heading after it are exempt."
+    why: "A heading made of numbers and internal codes tells a reader nothing about its subject, and a number is a second ordering nobody keeps."
+    applies: "Documents whose stage recorded the documentation standards at 0.1 or later."
+
+  C100:
+    title: "Section sets of documents by type"
+    what: "Reads the headings of documents in scope, and refuses a document missing a heading of the fixed set its type has (the brief, intake record, prioritised opportunities, landscape map, competitive synthesis, selected solution and expanded MVP) or carrying them out of order; a hypothesis, MVP option or scored solution whose id no level-2 heading names; MVP options without a How to choose between them heading and scores without The comparison; and a competitor card with no section, or a section missing a card heading."
+    why: "A document missing a section its type fixes, or carrying them out of order, leaves its approver to find what is absent, and an entry with no section of its own cannot be read or judged."
+    applies: "Documents of a stage whose run record lists the documentation standards, version 0.1 or later, among the know-how it ran under."
+  C101:
+    title: "Facets and findings in the competitive synthesis"
+    what: "Reads the competitive synthesis's (A7) level-2 sections that carry findings, lines opening with a tier label in bold (**[universal]**, **[common]**, **[emerging]** or **[rare]**), and refuses a section with fewer than four findings, a synthesis with no such section, and a finding whose text names no id of the hypothesis set or of the prioritised opportunities' primary and secondary lists and carries none of the words-table phrases for bearing on no problem, such as bears on none or addresses none."
+    why: "A facet with one or two findings is an inventory rather than a reading of the market, and a finding tied to no problem is an observation about a market nobody asked about."
+    applies: "Runs whose stage 3 records the competitive analysis standards, version 0.10 or later, once the synthesis exists."
+  C102:
+    title: "Unproduced solutions and their reasons"
+    what: "Reads the solution set's unproduced list, and refuses an entry with no id, an id listed twice or also held by a solution, a reason that is missing, under 20 characters or matching the generic-reason words, and a total of solutions and unproduced outside 3 to 5, or 3 to 7 on a set whose produced or, failing that, assembled date is before 2026-09-08 or missing."
+    why: "An instance lost without a reason is a silence a re-run cannot act on, and a set counted without what it lost hides how far the stage fell short of what it set out to author."
+    applies: "Runs whose solution set lists at least one unproduced solution."
+  C103:
+    title: "Opportunity lists the solutions share"
+    what: "Reads the opportunities the solutions in the solution set solve, and refuses, on a set whose produced or, failing that, assembled date is from 2026-09-07, more than three solutions sharing one list; on an older or undated set, two agent-written solutions that solve the same opportunities and, where the set's produced date is from 2026-08-19, an agent-written solution that solves part of what another agent-written solution solves."
+    why: "More than three solutions on one opportunity list are variants of one solution, and a person choosing between them is choosing how much of one solution to do."
+    applies: "Every run, once two or more solutions in the solution set name what they solve."
+  C104:
+    title: "Parts against their assembled document"
+    what: "Reads the parts a stage wrote under `parts/` against the document they name, and refuses a part that does not parse, names no `part_of` or a document the run does not hold, names no `item_id` or carries no body; one whose body, whitespace aside, is not in the document's body; one whose first level-2 heading appears more than once in the document; and one whose front-matter values differ from the entry with its id in the document's records, apart from a compliance or derived part."
+    why: "A document that summarises, re-titles or re-authors what each instance produced no longer carries the work that was checked, and a part assembled over twice reads as two."
+    applies: "Runs where a stage holds a `parts/` folder."
+  C105:
+    title: "Skills' evaluation suites, present or declared absent"
+    what: "Reads the evaluation path the skills in `.github/registry/skills.yaml` declare, and refuses a skill with no path, a missing or empty suite folder with no reason of more than 20 characters given for its absence, and a suite declared absent while its folder holds files."
+    why: "A declared suite that points at nothing reads exactly like one that exists, so a skill can be accepted with no held-out test behind it."
+    applies: "The repository, at every run of the repository checks."
+  C106:
+    title: "Names in solution headings"
+    what: "Reads the solution headings in the solution set's body, and refuses a heading that is a solution's bare id with no name beside it."
+    why: "A solution known only by its id loses the name its author gave it, since no field on the record carries one."
+    applies: "Every run, once the solution set holds solutions."
+  C107:
+    title: "Record ids and the citations naming them"
+    what: "Reads the run's records and the citations in the documents assembled from them, and refuses a record with no `record_id` or `artifact_id` or naming a document the run does not hold, two records sharing a `record_id`, and a `[rec:…]` citation or `assembled_from` entry naming a record the run does not hold."
+    why: "A citation to a record that does not exist, or to an identity two records share, reports success against whichever record it reaches, so research appears supported when it is not."
+    applies: "Runs holding at least one record under `records/`."
+  C108:
+    title: "Records cited and listed by their document"
+    what: "Reads the run's records against the documents they feed, and refuses a record its document does not cite as `[rec:…]`, the initiative document (A14) excepted, or does not list in `assembled_from`."
+    why: "A record the document does not carry is research that was done and thrown away in silence."
+    applies: "Runs holding at least one record under `records/`."
+  C109:
+    title: "Production fields on assembled documents"
+    what: "Reads the front matter of documents assembled from records, and refuses one missing `assembled_at` or `assembled_from`, and one carrying a production field of its own: `produced_at`, `bounds_hit`, `trace_id`, `scores_basis`, `constraint_basis`, `confidence_basis` or `structure_basis`."
+    why: "A production field on an assembled document separates the claim from the record that made it, so no check can tie it to the work behind it."
+    applies: "Runs holding at least one record under `records/`."
+  C111:
+    title: "Internal identifiers in the initiative"
+    what: "Reads the initiative's body and its reading copy outside fenced code blocks, and refuses an internal identifier: a document code (A8b), a hypothesis id (H1), an option id in the OPT-A form, an idea id in the ID-1 form, a requirement id in the record form (R-A8-01) or in the PRD's form (R1), a gate name (G5a, Q3) or a check id, unless a four-digit number follows it, as in H1 2027; SOL1, OPT1 and OPT-1 are not matched."
+    why: "A reader at the bank has never seen the workflow's internal handles and cannot follow a document addressed to them that uses them."
+    applies: "Runs whose stage 7 records the output voice, version 0.1 or later, once the initiative exists. A requirement id in the PRD's form (R1) is refused on runs whose run record's `build` is 1.14 or later."
+  C112:
+    title: "A stage's produced documents against its contract"
+    what: "Reads the stages the run record shows as produced, failed at the gate, in review, refined or accepted against the documents the workflow contract says they produce, and refuses a stage missing one, apart from a document parked by its binding, one whose contract step began after the stage ran, and one the stage's approval writes, before the stage is accepted."
+    why: "A stage that claims to have run while missing a document passes its gate on the checks that skip the absent document, so part of a stage is accepted as the whole of it."
+    applies: "Every run; a stage still pending or running is not read."
+  C115:
+    title: "Framed opportunities against the hypothesis set"
+    what: "Reads the framed opportunities (A3b) against the hypothesis set (A3), and refuses a hypothesis left unframed or framed twice, an agent-framed opportunity naming no hypothesis in `from`, and an opportunity naming a hypothesis the set does not carry; an opportunity a person brought (`origin: person`) may be added. It also refuses an opportunity id that is not `O` and a number, and a heading in the document other than `## O1: <its name> (from H1)`, naming the hypothesis in `from`, or `(yours)` for one a person brought, with `(z H1)` and `(vaše)` read as well."
+    why: "A hypothesis left unframed drops out of discovery unseen, an opportunity with no hypothesis under it has no problem anyone can trace it back to, and one carrying its hypothesis's id or a heading that names neither leaves a reader unable to tell the two apart."
+    applies: "Every run, once the framed opportunities exist. The id and the heading are read on runs whose run record's `build` is 1.16 or later."
+  C116:
+    title: "Bases and ranks in opportunity sizing"
+    what: "Reads the opportunities' root causes, customer impacts and ranks, and refuses a stated cause or impact with no basis, a basis outside analysis, assumption or unknown for a cause or judgement or unknown for an impact, a rank that is not a place from 1 to the number of opportunities, and prioritised opportunities (A4) carrying the fixed S2-UNRANKED sentence, word for word in the run's language, while a measure gives the opportunities two or more different places, or not carrying it while neither does."
+    why: "A cause or impact with no basis cannot be told apart from somebody's view and inherits the opportunity's trust tag, and an order that claims a ranking nobody made misleads the person prioritising."
+    applies: "Every run, once the framed opportunities exist; the ranks are read on runs whose run record's `build` is 1.10 or later, and the sentence on those runs with two or more opportunities, once the prioritised opportunities are written."
+  C117:
+    title: "Basis of the opportunities' market factors"
+    what: "Reads the framed opportunities' market factors basis, and refuses one that is missing, `unknown`, or other than `deferred_to_stage_3` or `supplied`."
+    why: "Market factors come from stage 3, which runs after the opportunities are prioritised, so calling them unknown hides that they are still to come."
+    applies: "Every run, once the framed opportunities exist."
+  C118:
+    title: "The alternatives field at opportunity framing"
+    what: "Reads the framed opportunities' `alternatives`, and refuses a missing field, a list with entries, and text that does not name stage 4 (stage 4, or the Czech fáze 4, fázi 4, etapa 4 or etapě 4)."
+    why: "A solution direction proposed while framing a problem pre-empts stage 4, and an absent field cannot be told apart from one left empty on purpose."
+    applies: "Every run, once the framed opportunities exist."
+  C119:
+    title: "Regulatory map, its registry and the area cards"
+    what: "Reads the regulatory map page, its registry (`.github/registry/regmap.yaml`), the skill bindings and the area cards, and refuses where they disagree, such as a page that differs from what its generator writes, a registry entry naming a body, dossier, area or superseding regime that does not resolve, a state or source outside its closed set, a mechanism or area body no skill binding declares, a compliance body a skill declares that the map does not signpost, or a Czech touchpoint table (§13) that differs from the English one (§6)."
+    why: "A compliance area no skill reads, a card whose source is unstated or a Czech card that differs from the English lets a screen run against obligations nobody can trace or quote."
+    applies: "The repository, at every run of the repository checks."
+  C120:
+    title: "Fields check.mjs reads, against §6"
+    what: "Reads the fields `check.mjs` resolves on documents and their list entries, as far as a static walk of its source follows them, and refuses a document field that neither the document's section of §6, the envelope nor the decision record declares, and a list-entry field that the list's entry shape in §6 does not declare, unless `.github/registry/field-walk.yaml` exempts it with a reason."
+    why: "The producer's field list comes from §6, so a field a check reads and §6 never declares is one no producer is told to write, and it is either invented or left out."
+    applies: "The repository, at every run of the repository checks."
+  C121:
+    title: "Copilot discovery and tool settings"
+    what: "Reads `.vscode/settings.json`, and refuses settings that do not map a Claude-side folder on disk (`.claude/agents`, `.claude/skills`, `.claude/rules`) to false in its discovery setting, do not set a tool gate the build lists to the value that withholds the tool, or do not set the CLAUDE.md and AGENTS.md settings to false, and a file that is missing or does not parse."
+    why: "Without these settings Copilot discovers agents and instructions written for another tool and offers tools the workflow keeps from its agents, and a default can change between versions unnoticed."
+    applies: "The repository, at every run of the repository checks."
+  C122:
+    title: "Language of the run's documents"
+    what: "Reads the language the brief declares and the bodies of the documents the run wrote, supplied material excepted, and refuses a language other than cs or en and a body that reads more as the other language than the declared one, counted by the two languages' common short words and, for Czech, its accented letters."
+    why: "A document in a language other than the one its run declared cannot be read by the people the run was written for, and an undeclared or unknown language leaves every producer to guess."
+    applies: "Runs whose brief declares a language."
+  C123:
+    title: "Screening inputs against the area cards' tables"
+    what: "Reads `.github/registry/screening-inputs.yaml`, the area cards' required-inputs tables (§4) and the know-how body `.github/know-how/compliance/screening-inputs.md`, and refuses where they disagree, such as an input declared twice or missing its name or question, a card table whose row count differs from the registry, a card row no input covers or two inputs claim, or a body table that differs from the registry."
+    why: "A required input no question covers is a fact a screen needs and nobody is ever asked for, and one covered twice is asked more than once."
+    applies: "The repository, at every run of the repository checks."
+  C125:
+    title: "Completeness of the solutions' compliance screens"
+    what: "Reads the solutions' compliance screens: in the current shape their answers and derived sections, refusing an unanswered question, a missing answers file and a section on disk that differs from what the answers derive; in the older shape their sub-domain entries, refusing one unreported, repeated, undeclared, without a reason or outside the three states; and in both, the words not applicable."
+    why: "A compliance screen with unanswered questions, blank sub-domains or a section that does not follow from its answers lets an under-identified obligation pass, and not applicable is a compliance judgement this workflow does not make."
+    applies: "Runs whose solution set's `produced_at`, or `assembled_at` where it has none, is on or after 2026-09-01: in the current shape from 2026-09-07, and in the older shape, as a section on each solution, from 2026-09-01 to 2026-09-06; and, where the set is absent or dated before 2026-09-01 or not at all, runs holding the retired initiative screen (A1b), in the older shape."
+  C126:
+    title: "Areas and missing inputs on compliance screens"
+    what: "Reads the solutions' compliance screens: in the current shape, refusing an area with no heading in the derived section and an undetermined question naming no declared screening input; in the older shape, refusing a screen that disagrees with the regulatory map on areas, cards, sources or uncovered areas, a missing input that is absent, undeclared or given on a sub-domain that is not undetermined, an area with a sub-domain in play and no fired trigger, and a fired trigger its card does not declare, or that names no sub-domain or one the screen does not report in play."
+    why: "An area missing from the screen reads as one nobody looked at, and an open question without the input that would settle it leaves the reader nothing to go and get."
+    applies: "Runs whose solution set's `produced_at`, or `assembled_at` where it has none, is on or after 2026-09-01: in the current shape from 2026-09-07, and in the older shape from 2026-09-01 to 2026-09-06, where a solution with no compliance section fails; and, where the set is absent or dated before 2026-09-01 or not at all, runs holding the retired initiative screen (A1b), in the older shape."
+  C128:
+    title: "Declared reductions and their lift conditions"
+    what: "Reads the reductions skills declare in `.github/registry/skills.yaml`, and refuses one incomplete for its kind of lift condition, such as a missing id, marker, date, body, owner or decision, and one whose state disagrees with a condition the build can decide: taken once the condition is met, or lifted before it is."
+    why: "A skill still telling a producer to mark a reduction it no longer takes, or claiming the full method before the condition holds, misstates what the output rests on."
+    applies: "The repository, at every run of the repository checks."
+  C129:
+    title: "Escalation flag and fired triggers"
+    what: "Reads the escalation flag beside the solutions' compliance screens, and refuses a missing flag, a flag that is not true or false or disagrees with whether a trigger fired; a fired trigger with an undeclared area or trigger, no reason, no routing or, when it routes outside the four areas, no note; and an uncertainty trigger left unfired while the sub-domain it watches cannot be determined."
+    why: "A fired escalation trigger is a fact a person must see at the decision, and an unresolved sub-domain must not silence the trigger meant to catch that uncertainty."
+    applies: "Kept for runs whose solution set's `produced_at`, or `assembled_at` where it has none, falls from 2026-09-01 to 2026-09-06, and, where the set is absent or dated before 2026-09-01 or not at all, runs holding the retired initiative screen (A1b); on a set dated from 2026-09-07 it counts the triggers fired and cannot fail."
+  C130:
+    title: "Bound compliance touchpoints and their resolutions"
+    what: "Reads the compliance touchpoints that name an area on the expanded MVP (A11), the PRD draft (A12) and the agreed PRD (A13), and refuses an area, sub-domain or trigger row the area's card does not declare, a resolution other than requirement, open item or narrowed out, a resolution missing what it needs (what a requirement names, an open item's owner and date, a reason for narrowing), and a document that does not name an area with no card as unexamined."
+    why: "A touchpoint written as free text or left with no resolution has been listed rather than addressed, and no two runs can be compared on it."
+    applies: "Runs whose expanded MVP or PRD carries touchpoints naming an area; a document whose touchpoints are plain text is not read."
+  C131:
+    title: "Compliance sub-domains carried between documents"
+    what: "Reads the sub-domains bound on the expanded MVP, the PRD draft and the agreed PRD, in that order among those whose touchpoints name an area, and refuses a sub-domain that leaves the next such document without being listed there as dropped with a reason and who dropped it, and one bound there and not on the document before it with no trigger named."
+    why: "An obligation that silently disappears between two documents is lost without anyone deciding to drop it."
+    applies: "Runs where at least two of the expanded MVP, the PRD draft and the agreed PRD carry touchpoints naming an area."
+  C132:
+    title: "The scoring model, its registry and §8.3"
+    what: "Reads `.github/registry/scoring.yaml` and §8.3 of the business logic, and refuses a model that departs from the design, such as a score count other than two, a score with a weight, a denominator or no body for its bands on disk, a dimension left out without what it would have measured, a date and who decided, or marked parked, or a §8.3 that differs from the registry."
+    why: "A score combined with another, weighted or anchored to no body cannot be given the same way twice, and a dimension removed with no record cannot be told from one forgotten."
+    applies: "The repository, at every run of the repository checks."
+  C135:
+    title: "The content register and specification files"
+    what: "Reads `specifications/CONTENT-REGISTER.md`, the register behind it and the markdown files under `specifications/`, and refuses a CONTENT-REGISTER.md that differs from what its generator writes, a markdown file in no register, and an entry that does not exist or lacks what its kind needs, such as a purpose, an owner, a release stamp, a generator on disk or a guarding check."
+    why: "A document nobody registered, or a generated one nothing guards, is maintained by hand while reading as derived, and nobody can tell which documents are current."
+    applies: "The repository, at every run of the repository checks."
+  C136:
+    title: "Deciding checks named on skill pages"
+    what: "Reads the skill pages against the checks the gate model says decide their skill's quality rules, and refuses a page missing such a check, and a page naming a check outside its gate, the universal checks and the repository checks."
+    why: "A producer reading a page that omits a check running on its work, or names one nobody runs, works to a different bar from the one it is graded against."
+    applies: "The repository, at every run of the repository checks."
+  C137:
+    title: "Listed items in the document body"
+    what: "Reads the entries the records list as the competitive synthesis's standards, patterns and trends (A7), the solution set's solutions (A8) and the framed opportunities (A3b), and refuses an entry whose key or id appears neither in the document's body nor under its What we could not establish section."
+    why: "An item the record asserts and the body never mentions passes the gate on the record while a person reading the document cannot find it."
+    applies: "Every run, for those documents unless their `produced_at`, or `assembled_at` where they have none, is before 2026-08-28."
+  C138:
+    title: "List fields declared by several records"
+    what: "Reads the list fields the run's records declare for their documents, and refuses a list given a non-empty value by two or more records of one document, apart from a field written in its singular form, which appends."
+    why: "Items in a second record's list sit on disk and in the body while every content check reads only the first record's list, so they are invisible to the gate."
+    applies: "Every run whose records hold at least one non-empty list."
+  C139:
+    title: "Banned vocabulary, stock phrases and hedges"
+    what: "Reads the prose of documents written under the output voice, outside code, quotations, blockquotes and the bibliography, and refuses a banned word (such as leverage, robust or seamless), stock phrase (such as it is important to note) or hedge (such as arguably or perhaps)."
+    why: "Stock vocabulary, filler phrases and hedging make a document read as generated and blur what it actually claims."
+    applies: "Documents of a stage that records the output voice, version 0.1 or later, unless their `produced_at`, or `assembled_at` where they have none, is before 2026-08-28."
+  C140:
+    title: "Copilot tool grants and skill capabilities"
+    what: "Reads the Copilot tool grants in `.github/registry/agents.yaml` and the agent files, the registry's substrate catalogue and the skill pages' Capability lines, and refuses a granted tool the catalogue does not carry, a specific edit tool granted without the edit umbrella, a catalogue that does not say when and from what it was read, and a Capability line that names a tool or differs from what the registry declares for the skill."
+    why: "VS Code drops a tool name it does not know without a word, so an agent runs with less than the registry says, and a skill naming a tool is wrong on every surface but one."
+    applies: "The repository, at every run of the repository checks."
+  C141:
+    title: "Git ignore rule for the runs root"
+    what: "Asks git whether a run created under the configured runs root (`.github/runs-root`, or `fixtures` where that file is absent) would be ignored, and refuses one that would not."
+    why: "A run under a root git does not ignore is staged by the first add-all, putting customer material into a repository meant for source code."
+    applies: "The repository, at every run of the repository checks."
+  C142:
+    title: "Run init against the layout and published tree"
+    what: "Starts a probe run with `run-state.mjs init` in a temporary folder and reads the run tree `.github/copilot-instructions.md` publishes, and refuses a folder of the scripts' layout (the stage folders, `records/` and its stage folders, `read/` and both supplied folders), the run record or the front page that init does not create; a folder init creates that the layout does not name; and a published tree that does not name the stage folders, `records/<stage>`, both supplied folders, the run record and the front page."
+    why: "A folder an agent is told to write into that the run was never given, or a tree the rules describe differently from the one created, sends producers to paths that do not exist."
+    applies: "The repository, at every run of the repository checks."
+  C143:
+    title: "Accepted stages and their upstream stages"
+    what: "Reads the stages the run record shows as accepted against the upstream stages the workflow contract's requirements give them, and refuses an accepted stage standing on one not accepted."
+    why: "A stage accepted over an upstream stage nobody accepted is a run that moved past a gate nobody ran."
+    applies: "Every run."
+  C144:
+    title: "The script register and the operator page"
+    what: "Reads the scripts in `.github/scripts`, `.github/registry/scripts.yaml`, the operator page `.github/OPERATING-A-RUN.md` and the wrapper entries in `.github/registry/agents.yaml`, and refuses a script with no valid disposition or a registered script not on disk, a page that differs from its generator, a page missing an operator or generator script or the path of a wrapper whose entry covers a skill the contracts bind to a stage, and a page showing a harness or hook script."
+    why: "A script with no stated disposition cannot be told from a command a person is meant to run, and an operator page that omits a command or shows the build's own harness misleads whoever drives a run."
+    applies: "The repository, at every run of the repository checks."
+  C145:
+    title: "Runs folder paths on agent surfaces"
+    what: "Reads the surfaces an agent loads, the auto-attached instruction files and `run-state.mjs`, and refuses a surface naming the test runs folder or the configured runs root as a path, an instruction with no `applyTo` or one naming some stage folders and not others or pinned to a runs folder, and a `run-state.mjs` that does not carry `SPOCK_ALLOW_FIXTURES`, its escape for a run inside the test runs folder."
+    why: "The runs root is a setting, so an agent taught a folder's name writes where the setting may not point, a bank's real runs can land among the fabricated ones every count is drawn from, and an instruction pinned to a root stops attaching when the root moves."
+    applies: "The repository, at every run of the repository checks."
+  C146:
+    title: "Skill rules against the gate model's mirror"
+    what: "Reads the quality rules skills declare in `.github/registry/skills.yaml` against the gate model's mirror of them, and refuses a rule one side holds and the other does not, a mirrored rule with no valid instrument or, when mechanical, no deciding check, and a skill whose stated evaluator differs from the tally of its rules by instrument."
+    why: "A rule the gate model does not mirror has nothing deciding it, a mirrored rule nobody wrote is a gate deciding nothing, and a stated evaluator that differs from the rules overstates how a skill is checked."
+    applies: "The repository, at every run of the repository checks."
+  C147:
+    title: "Registered numbers in reader-facing documents"
+    what: "Reads the claims in `.github/registry/claims.yaml`, the facts `facts.mjs` computes and the documents the claims name, and refuses a document that does not state the registered wording with the computed value, still carries the superseded wording, or states the wording with a different number."
+    why: "A number a reader trusts that no longer matches the build ages silently, and a corrected sentence beside the old one leaves the document contradicting itself."
+    applies: "The repository, at every run of the repository checks."
+  C148:
+    title: "Enforcement stated for the shared rules"
+    what: "Reads the numbered rules in the rules that hold everywhere section of `.github/copilot-instructions.md`, and refuses a rule whose line carries no backticked check id and not the word judged, one whose line carries both, one naming a check no register carries, a section that does not state how many of its rules are checked, as N of the M, and a section that, while some rules are unchecked, says of the whole count that it is checked."
+    why: "A rule stated as enforced with nothing enforcing it, in the file both surfaces treat as authoritative, is an overclaim every agent reads."
+    applies: "The repository, at every run of the repository checks."
+  C149:
+    title: "Committed runs and their accepted failures"
+    what: "Reads `.github/registry/fixtures.yaml`, the runs git holds under the fixtures folder and the gate's verdict on them, and refuses a committed run the file does not declare, a declared run not on disk, a material other than fabricated or real, a missing purpose, a failure the file does not accept, and an accepted failure that no longer happens."
+    why: "A committed run nothing declares is one nothing says anything about, and an accepted failure that no longer happens reads as coverage exactly like a real one."
+    applies: "The repository, at every run of the repository checks."
+  C150:
+    title: "Run documents outside their run folder"
+    what: "Reads the front matter of Markdown files across the repository, and, where the fixtures folder holds a run, refuses a file carrying an `artifact_id` and a run id in the run-id form that sits outside that run's folder in the fixtures, the store corpus and the runs root."
+    why: "Every gate reads a run by walking its own folder, so a document outside it is checked by nothing while its run reports it missing."
+    applies: "The repository, at every run of the repository checks."
+  C151:
+    title: "Instructions to the agent in untrusted material"
+    what: "Reads the intake record (A2b), the landscape map (A5) and the competitor deep-dive (A6) above their How this was produced heading, and refuses wording such as an instruction to ignore earlier instructions, a mention of a system prompt or a claim of new instructions; from the first section heading on, a write verb followed in the same sentence, within 60 characters, by a path in the build's `.github/` folder; and the name of a tool the substrate registers, in camelCase or in code font."
+    why: "An instruction that arrived in supplied or fetched material and survived into a document is the quarantine failing, and every later stage that reads the document carries it forward."
+    applies: "Every run, once one of those three documents exists."
+  C153:
+    title: "Compliance triggers and sub-domains against area cards"
+    what: "Reads the areas, triggers and sub-domains named on the retired initiative screen (A1b), the solutions' compliance sections in the solution set, the expanded MVP, the PRD draft and the agreed PRD, and refuses an area the regulatory map does not register, a trigger or sub-domain its area card does not declare, and a trigger recorded as putting in play a sub-domain its card does not say it does."
+    why: "A screen claiming an obligation its area card does not create is a requirement with nothing behind it, and a wrong pairing made early is carried forward into the PRD."
+    applies: "Every run holding one of those documents."
+  C154:
+    title: "Plain words for document codes"
+    what: "Reads the document codes `.github/artifact-fields.yaml` declares, the plain-words table in `.github/copilot-instructions.md` and `.vscode/settings.json`, and refuses a code with no plain words in the table, plain words for a code the build does not declare, and settings whose text does not carry both `~/.copilot/agents` and the words \"another agent tool's home agents folder\"."
+    why: "An agent with no words for a code says the code to a person who has never seen one, and an agent location nothing scopes reads as scoped unless it is named."
+    applies: "The repository, at every run of the repository checks."
+  C155:
+    title: "Tasks against scripts, boxes and the shared rules"
+    what: "Reads `.vscode/tasks.json` against the script register, `boxes.mjs` and the shared rules' table of boxes, and refuses a disagreement between them or a task that would not run as written, such as an unregistered script, an operator script with no task, an input declared and unused, a box passed on the command line or out of order, a command word other than letters, digits, `. / _ -`, `::`, a box or a run word, a flag or run-state verb its script does not name, or a platform form that does not end with the task's own command."
+    why: "The tasks are the only way a person and the agent drive the workflow, so a task running an unregistered script, losing a box on the way or passing a word a shell rewrites runs something other than what was asked."
+    applies: "The repository, at every run of the repository checks."
+  C156:
+    title: "Business logic stage cards against the contract"
+    what: "Reads the stage cards in §5 of the business logic against the workflow contract, and refuses a card naming no agent or another than the contract binds, leaving out a document the stage produces or a skill its steps run, or naming a check outside its quality gate and the universal checks, and a card for a stage the contract does not carry or a stage with no card."
+    why: "A specification that describes a stage differently from what the workflow does sends its reader to the wrong agent, document or check."
+    applies: "The repository, at every run of the repository checks."
+  C157:
+    title: "The user-invocable field on agent wrappers"
+    what: "Reads the `user-invocable` field of the Copilot agent wrappers in `.github/agents`, and refuses a wrapper without it, a material-intake quarantine wrapper set to true, and another wrapper set to false."
+    why: "A quarantine agent in the picker can be run by hand on untrusted material, and a producing agent nobody can pick cannot carry its stage."
+    applies: "The repository, at every run of the repository checks."
+  C158:
+    title: "The overview's stage diagram against the contract"
+    what: "Reads the stage boxes of the diagram in `specifications/BUSINESS-LOGIC-OVERVIEW.md` against the workflow contract, and refuses a box for a stage the contract does not have, a box count other than the contract's number of stages, a box whose actor text carries neither the registry name of the agent the contract binds nor the word nobody, and a box leaving out a document its stage produces."
+    why: "The overview is what a reader opens first, and a diagram naming the wrong agent or omitting a document misdescribes the workflow from the start."
+    applies: "The repository, at every run of the repository checks."
+  C159:
+    title: "Supplied problem material and the items citing it"
+    what: "Reads the problem material's items in use against stage 2's supplied folder and the stage 2 folder itself, and refuses an item that arrived as a file with no `source_path` or one the folder does not hold, a supplied file no item cites, a Markdown file with no front matter sitting directly in the stage 2 folder, and a file with no document id in a superseded folder inside it; on a run whose record names build 1.9 or later, an item from the conversation naming a file is held to it too."
+    why: "An item citing a file that is not there, or a supplied file nothing cites, is material nobody checked, and material loose in a stage folder is read as a document."
+    applies: "Runs holding the problem material whose supplied folder holds files, or whose problem material's `produced_at` is on or after 2026-09-04; a Markdown file with no front matter in the stage folder, or a file in a superseded folder inside it, is refused on every run."
+  C160:
+    title: "Stage 4's fan-out slate, briefs and parts"
+    what: "Reads stage 4's slate, author briefs and parts against the solution set, and refuses a slate or brief folder that is missing, a slate with no entries, a slate entry with a written statement or with no problem or evidence named, a slate entry with no author brief or a brief with no slate entry, and a briefed solution that left neither a part nor an unproduced entry."
+    why: "A stage composed as a fan-out that ran as one pass, or an invocation that left no trace, cannot be told from one that ran as designed."
+    applies: "Runs whose solution set's `produced_at`, or `assembled_at` where it has none, is on or after 2026-09-03, while the workflow contract composes stage 4 as a fan-out."
+  C161:
+    title: "Declared surface and the tester guide's provider step"
+    what: "Reads `.github/surface` and the tester guide (`specifications/onboarding/TESTER-GUIDE.md`), and refuses a surface file that is missing or holds a value other than copilot, other-agent-tool or the unset value, a guide with no `###` section mentioning the provider and `.github/surface`, and a guide with no bullet carrying the words provider is not GitHub Copilot from its §8 heading to its end."
+    why: "Results from a run on the wrong tool are void, and without a declared surface and a step that asks for it nothing shows which tool produced them."
+    applies: "The repository, at every run of the repository checks."
+  C162:
+    title: "The surface recorded on the run"
+    what: "Reads the run record's `surface` and `surface_observed`, and refuses a missing field, a surface other than `copilot` or `other-agent-tool`, and an observed surface, other than `unknown`, that differs from the declared one."
+    why: "A finished run that cannot say, or says wrongly, which tool produced it gives no basis for comparing runs driven on different tools."
+    applies: "Runs whose run record's `created_at` is on or after 2026-09-03."
+  C163:
+    title: "The asked flag on person-attributed gaps"
+    what: "Reads the gaps documents record in `unknowns`, and refuses one with the reason `not_known` or `declined` that does not carry `asked: true`."
+    why: "Not known and declined are claims about what a person said, and both are false when nobody asked."
+    applies: "Documents whose `produced_at`, or `assembled_at` where they have none, is on or after 2026-09-03 and that record such a gap."
+  C164:
+    title: "Market evidence in the solutions' sections"
+    what: "Reads the solutions' sections on what the market read contributed (Against the market, or Inspired by on an older set), and refuses a synthesis element a solution's record rests on that its section does not name, and an id in the section, in the form ST, TR, P, S or T and digits, that the competitive synthesis (A7) and the record do not hold."
+    why: "A solution resting on market evidence its reader cannot see, or citing an element that does not exist, gives the person choosing between solutions a reason that is not there."
+    applies: "Runs whose solution set's `assembled_at`, or `produced_at` where it has none, is on or after 2026-09-04, once a solution carries that section."
+  C166:
+    title: "Compliance summary against its sub-domain states"
+    what: "Reads the solutions' compliance summaries against the sub-domain states beneath them, and refuses a missing summary, an area with a sub-domain in play that the summary's in-play list does not name or a name there for no such area, an escalation line that is missing or, when the flag is not set, holds no word opening with no, none or nothing (nic or žádn in Czech), an open-question count other than the number of undetermined sub-domains, and a missing input the open questions do not name."
+    why: "A full compliance section is too detailed to act on at a decision, and a summary that says less or more than the detail behind it hides or invents exposure."
+    applies: "Kept for solution sets whose `assembled_at`, or `produced_at` where they have none, falls from 2026-09-04 to 2026-09-06; a later set is not read, because its summary opens a section a script derives and C125 compares whole."
+  C167:
+    title: "Decisions recorded outside the gates"
+    what: "Reads the decisions on the run record outside the gates, and refuses one with an unknown stage or kind or missing its words, person, role, `by_agent: false` or date; an exception missing the checks it signs off by id, its reason, or an allowed cause where it gives one; and a check, reason or cause on a decision that is not an exception."
+    why: "A decision without words, a person, a role or a date is a tick box that cannot say what was decided or who was accountable for it."
+    applies: "Runs whose record holds at least one decision."
+  C168:
+    title: "Signed exceptions and choices against the run"
+    what: "Reads the signed exceptions, choices and decision gates on the run record against the gate results and the stages' documents, and refuses a standing exception for a check the run no longer fails or its own stage's gate did not record as failing, a stage holding the selected solution with a passed gate and no decision gate or choice, and a document produced after the standing choice on its stage, apart from one written from that choice."
+    why: "A sign-off outliving its failure is a switch left on, one answering another stage's failure covers nothing, and a document newer than the choice about it is not what the person chose."
+    applies: "Runs with a standing signed exception, a stage holding the selected solution whose quality gate's `run_at` is on or after 2026-09-04, or a standing choice whose `at` is on or after 2026-09-04."
+  C169:
+    title: "Acceptances on documents against the run record"
+    what: "Reads the gate decisions written on documents against the decision gates the run record holds, and refuses a decision on a document that the record does not hold for its stage or that names another person or date, and a recorded decision gate no document writes down."
+    why: "An acceptance written on a document that the run does not record is a signature nobody gave, and a recorded decision no document shows is one nobody can see."
+    applies: "Stages whose quality gate's `run_at` is on or after 2026-09-04."
+  C170:
+    title: "Records of stages holding documents"
+    what: "Reads, for stages whose contract step declares records, the stage folder and its `records/` folder, and refuses a stage folder holding `.md` documents whose `records/` folder holds no `.record.md` file, and a misnamed record file beside them."
+    why: "A document a gate reads that was assembled from no record shows nothing of the work behind it, and a misnamed record file is never joined to its document."
+    applies: "Every run, for each stage whose folder holds a document and whose contract step declares records."
+  C171:
+    title: "Fired touchpoints in the expanded MVP"
+    what: "Reads the compliance touchpoints the chosen solution fired in the solution set, by the id their text opens with (two capital letters, a hyphen and digits, as DP-01), against the expanded MVP's touchpoints, and refuses a touchpoint the expansion neither carries nor names as narrowed out, a missing selection and a chosen solution the set does not hold; the chosen solution is the one the selected solution's G4 decision names, or the single standing stage 4 choice where it names no solution."
+    why: "A touchpoint that disappears between the chosen solution and its MVP takes its obligation with it, and nobody decided to drop it."
+    applies: "Runs holding the solution set, the selected solution and an expanded MVP whose `produced_at`, or `assembled_at` where it has none, is on or after 2026-09-09."
+  C172:
+    title: "Measurements of supplied problem files"
+    what: "Reads the problem material's items that cite a supplied file, and refuses an item in use missing its bytes or SHA-256 or whose file in stage 2's supplied folder is missing or hashes differently, and an item no longer in use with no removal or replacement date, or whose kept copy is missing or differs from its recorded fingerprint."
+    why: "A supplied file changed after intake read it leaves the run's findings resting on material nobody can now read, and with no measurement nothing can show it changed."
+    applies: "Runs whose problem material's `produced_at`, or `assembled_at` where it has none, is on or after 2026-09-11 and that has an item citing a supplied file."
+  C173:
+    title: "The documentation signpost against its generator"
+    what: "Compares `specifications/DOCUMENTATION.md`, the page a person arriving opens, with what its generator writes, and refuses a page that is missing or differs."
+    why: "A signpost edited by hand drifts from the register it is built from, and sends a newcomer to documents that moved or misses ones that were added."
+    applies: "The repository, at every run of the repository checks."
+  C174:
+    title: "Versions of pinned governing documents"
+    what: "Reads the versioned pins in `governing-documents/` and its README table, and refuses a pin with no `**Version:**` line or one naming another version than its file name carries, and a table link to a file not in the folder."
+    why: "The governing documents win every disagreement, so a pin whose name and contents name different versions, or a table linking a missing file, leaves nobody sure which text governs."
+    applies: "The repository, at every run of the repository checks."
+  C175:
+    title: "Fixture and test words in the initiative"
+    what: "Reads the body of the initiative document (A14) outside fenced code blocks, and its reading copy, and refuses the words fixture, fixtures and `id_basis` and the Czech fiktivní and testovací, with or without the accent, words that tell its reader the run is not real."
+    why: "A statement in the document the bank opens that the run is a fixture or a test tells its reader the work is not real."
+    applies: "Every run once the initiative document exists, whatever its date. On a run whose run record's `build` is before 1.14, or records none, the reading copy is not read, and fiktivní and testovací written with the accent count where more letters follow, as in fiktivními, and not on their own."
+  C177:
+    title: "Trust-tag counts in stage 2 documents"
+    what: "Reads sentences in the hypothesis set (A3) and the prioritised opportunities (A4) that contain trust, or tag at the end of a word, name no entry id and put a count before strong or weak, and refuses a count that differs from the hypothesis record's tally for that tag."
+    why: "A trust roll-up written once and not recomputed after the set changed tells the person deciding the evidence is stronger or weaker than it is."
+    applies: "Runs whose hypothesis set holds hypotheses. A number in the form two of the five is read as the total on every run; on runs whose run record's `build` is 1.12 or later, a number right after of or of the, as in one of two, is read as the total."
+  C178:
+    title: "The free-roam roster against the agent registry"
+    what: "Reads the roster table on `specifications/definitions/cross-cutting/free-roam.md` against the agents `.github/registry/agents.yaml` gives modes, and refuses an agent missing from the page or listed with other modes or the same modes in another order, and a page entry the registry gives no modes."
+    why: "A roster that understates what an agent can be asked to do, or promises a mode no wrapper reaches, misleads whoever picks an agent."
+    applies: "The repository, at every run of the repository checks."
+  C179:
+    title: "Tasks against the task page"
+    what: "Reads the tasks in `.vscode/tasks.json` against `specifications/onboarding/TASKS.md`, and refuses a task the page does not describe, a page entry with no task, a page that differs from what its generator writes, and a task running `task.mjs` that does not pass its own label as `SPOCK_TASK`."
+    why: "A task nobody describes is one a person can run without knowing what it does, and a task passing another's label prints the wrong task's boxes."
+    applies: "The repository, at every run of the repository checks."
+  C180:
+    title: "Verdicts on the judged rules"
+    what: "Reads the judged verdicts recorded on stages, and refuses a verdict count that differs from the number of rules the stage says were asked, a verdict other than `yes`, `no`, `cannot_tell` or `skipped`, and verdicts with no person or role named."
+    why: "A gate passed with its judged rules partly answered, or answered by nobody named, claims a person looked when the record cannot say who or at what."
+    applies: "Every run, for the stages whose record holds judged verdicts."
+  C181:
+    title: "The supplied market file and supplied-list claims"
+    what: "Reads the supplied market file the run record holds for stage 3, and refuses one missing on disk or whose SHA-256 or byte count differs from the record; where the record holds no such file, it refuses a stage 3 document recording `egress_basis: supplied` whose assembled or, failing that, produced date is on or after 2026-09-14."
+    why: "Competitor cards drawn from a list that changed after it was recorded come from a list nobody can now read, and a claim of a supplied list with no recorded file has nothing to hold it to."
+    applies: "Runs whose record holds a supplied market file, or whose stage 3 documents record `egress_basis: supplied` with an `assembled_at`, or `produced_at` where they have none, on or after 2026-09-14."
+  C182:
+    title: "Use of a supplied market list"
+    what: "Reads, on a run handed its market list, the competitor deep-dive's (A6) cards and unprofiled entries and the stage 3 documents' research basis, and refuses cards plus reasoned unprofiled entries that fall short of the competitors supplied, and a stage 3 document recording a basis other than supplied."
+    why: "A supplied competitor with neither a card nor a reason is dropped evidence, and a document claiming a search the run never made is untrue."
+    applies: "Runs whose record holds a supplied market file for stage 3."
+  C183:
+    title: "Release in the build file and setup page"
+    what: "Reads `.github/build` and SETUP.md's header, and refuses a build file that is missing or holds anything other than a release number such as 1.12 or 1.12.1, alone on one line, and a header that names another release or no release."
+    why: "A run records the build it starts on, so a build file that is missing, malformed or different from the setup page leaves a run unable to say which release it ran under."
+    applies: "The repository, at every run of the repository checks."
+  C184:
+    title: "Card source pages, and the supplied list"
+    what: "Reads the sources of the competitor cards this run researched, and refuses a source with no page address and an address that is a site's front page, its path `/` or empty with no query; where the run was handed its market, it also refuses an address that is neither a page on the list nor under one."
+    why: "A card citing a site's front page, a page outside the list it was handed, or no page at all, cannot be traced to the page its claims were read on."
+    applies: "Once the competitor deep-dive exists: the front page and the missing address on runs whose run record's `build` is 1.16 or later, searched or supplied; the list and the missing address on runs whose `build` is 1.3 or later and whose record holds a supplied market file. A card whose `researched_at` is before the run record's `created_at`, or the list's `recorded_at` where the record has none, is reused and not read."
+  C185:
+    title: "Fired touchpoint identifiers in later documents"
+    what: "Reads the touchpoint identifiers the chosen solution's compliance screen fires against the bodies of the expanded MVP and of the agreed PRD (the PRD draft, on a run whose record names build 1.10 or later, before the PRD is agreed), and refuses an identifier a document does not name, and a screen whose stated touchpoint count differs from the identifiers it names."
+    why: "A later document naming fewer touchpoints than the screen fired, with nothing accounting for the rest, reads as a recount or a dropped obligation and its reader cannot tell which."
+    applies: "Runs whose run record's `build` is 1.4 or later, once a chosen solution's screen has fired a touchpoint and the expanded MVP or PRD exists."
+  C186:
+    title: "Line endings of tracked files"
+    what: "Reads `.gitattributes` and asks git for tracked text files holding a carriage return, and refuses a missing `* text=auto eol=lf` line and a file found."
+    why: "Without one line ending held for every text file, two copies of one release can differ by machine and a reader expecting one form misreads the other."
+    applies: "The repository, at every run of the repository checks."
+  C187:
+    title: "Entries of assembled documents and their parts"
+    what: "Reads the entries of documents assembled from parts against the parts on disk and those taken back, and refuses an entry the document still carries whose part is gone and that its unproduced list does not name with a reason."
+    why: "When parts are taken back, a document assembled from them can keep entries with nothing behind them, while a check that compares only the parts still on disk passes by comparing fewer."
+    applies: "Runs whose run record's `build` is 1.10 or later and whose records name parts (an `item_id`)."
+  C188:
+    title: "Readers of the chosen solution"
+    what: "Reads the scripts in `.github/scripts` other than the suite, outside comment lines, and refuses code reading the chosen solution itself, by reading `decision.selection`, matching `selection:` with a pattern or calling `decisionKey` with `selection`, outside `chosenSolution` and `choiceSet` in `gates.mjs`, and a `gates.mjs` without those two."
+    why: "Scripts that each read a person's choice their own way drift apart, so two of them can disagree about which solution was chosen."
+    applies: "The repository, at every run of the repository checks."
+  C189:
+    title: "The workflow's files against the release list"
+    what: "Reads the release's file list (`.github/release-files.json`) against the workflow's files under `.github/` and `.vscode/`, and refuses a listed file missing or with another SHA-256, an unlisted file in a folder the workflow runs from, and a list that cannot be read or is missing while the copy's git commit holds it; the surface setting, the runs root, the competitor store, the list itself and three paths git ignores are left out, with hidden files, `node_modules`, `.log` files and `insights.md`."
+    why: "An edit to the workflow's own files on one computer changes how the workflow behaves there without anyone knowing, and the next update would undo it without a word."
+    applies: "Runs whose run record's `build` is 1.9 or later, in a copy made by a release (one holding `.github/release-files.json`, or whose git commit holds it)."
+  C190:
+    title: "Supplied files against intake's records"
+    what: "Reads the files in stage 2's and stage 3's supplied folders against intake's records, and refuses a stage 2 file no item in use cites or that no longer matches its recorded hash, and a stage 3 file that is not the market list the run record holds or no longer matches its hash."
+    why: "A supplied file nobody took in, or one changed after intake read it, leaves the run working from material no one checked."
+    applies: "Runs whose run record's `build` is 1.9 or later and whose supplied folders hold a file intake did not read in or a file recorded with a hash; a file recorded with no hash is not compared."
+  C191:
+    title: "Czech fixed messages against their English"
+    what: "Reads the two-language table of fixed messages, its blocks on disk and the gate questions, and refuses a block that differs from its English source or from the table, a Czech row that is missing, is the English, or carries other braces or backticked values, a fill, condition or list the message printer does not know, and a gate question with no Czech, or Czech that does not end in a question mark or carries a long dash."
+    why: "A Czech message that drops a value, keeps the English or names a fill nothing prints shows a Czech run a broken or untranslated sentence at the point it has to act."
+    applies: "The repository, at every run of the repository checks."
+  C192:
+    title: "Rule sentences in the rule-sentence register"
+    what: "Reads the rule sentences on the four surfaces an agent reads against `.github/registry/rule-sentences.yaml`, and refuses a sentence with no row, a row for a sentence on no surface, a row unsorted or with an unknown sort, a broken row naming no replacing ticket, and a backed row naming nothing behind it."
+    why: "A rule an agent is told to follow with nothing recorded behind it reads as enforced when nobody knows whether it holds."
+    applies: "The repository, at every run of the repository checks."
+  C193:
+    title: "Contradictions recorded against stage 2 documents"
+    what: "Reads the contradictions the hypothesis set (A3) records against stage 2 documents, and refuses one naming a document stage 2 does not carry, one marked corrected whose claim the document still holds, one quoting a claim the document does not hold, and one left standing; the person keeps a standing one by signing this check off, which covers the entries the sign-off lists, those open when it was made."
+    why: "A claim in stage 2's own documents that the evidence contradicts would carry into every later stage as if it were sound, unless someone corrects it or knowingly keeps it."
+    applies: "Runs whose run record's `build` is 1.11 or later, once the hypothesis set exists."
+  C197:
+    title: "Check ids read from printed gate lines"
+    what: "Reads the scripts in `.github/scripts`, apart from `check.mjs`, the suite, `eval.mjs`, `judge.mjs` and `repo-check.mjs`, outside comment lines, and refuses a pattern that matches the upper-case failure word and captures a check id, the way a reader of printed gate lines would."
+    why: "A script reading a gate's verdict from its printed wording breaks silently when the wording changes and can act on a failure the gate did not record."
+    applies: "The repository, at every run of the repository checks."
+  C199:
+    title: "Words read by patterns in the checks' modules"
+    what: "Reads the pattern literals in `check.mjs`, `gates.mjs`, `doc-structure.mjs` and `derive.mjs`, and refuses one that reads a word of its own rather than from the words table, unless `WORDS_EXEMPT` lists that literal for that file, and an exemption whose pattern is gone."
+    why: "A word a check reads that is written only in English never matches a Czech run, so the check passes or fails on the language rather than on the content."
+    applies: "The repository, at every run of the repository checks."
+  C200:
+    title: "Hook file and chat.useHooks"
+    what: "Reads `.github/hooks/step-guards.json` and `.vscode/settings.json`, and refuses a hook file that is missing, does not parse or lacks one of SessionStart, UserPromptSubmit, PreToolUse, PostToolUse and Stop, a hook under one of them whose `bash` or `powershell` command is not `node .github/scripts/step-guard.mjs` followed by that event, and settings that do not set `chat.useHooks` to true."
+    why: "Without the hook file or the setting VS Code runs no hook, so an agent's step that is not its own goes through while the gates still pass."
+    applies: "The repository, at every run of the repository checks."
+  C202:
+    title: "Registry citations in agent, skill and instruction text"
+    what: "Reads citations written as `file.yaml` under `key`, or `key: sub`, in the agent files, skill pages, know-how definitions, shared rules and instruction files, and refuses one naming a YAML file not in `.github/registry/`, `.github/` or `specifications/`, or a key or sub-key that file does not hold."
+    why: "A citation of a block that is not there reads as a declaration and holds nothing, so an agent following it looks for a rule that does not exist."
+    applies: "The repository, at every run of the repository checks."
+  C206:
+    title: "Opening blocks against the run record"
+    what: "Reads the opening blocks of accepted intake records, hypothesis sets, framed and prioritised opportunities, solution sets, MVP options, expanded MVPs, PRD drafts and agreed PRDs against the run record, and refuses a fact line or recorded decision-change line the record holds that the block lacks or gives differently, and a list line the record does not hold."
+    why: "An opening block that disagrees with the record tells the approver something other than what was decided, in the first lines they read."
+    applies: "Runs whose run record's `build` is 1.12 or later, for a document that carries an opening block once its stage is accepted and has recorded the documentation standards, version 0.10 or later."

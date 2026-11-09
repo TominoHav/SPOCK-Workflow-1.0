@@ -1,0 +1,7 @@
+step,sessions_started,sessions_completed_step,drop_off_rate_pct,median_time_seconds,support_signal,synthetic
+Journey entry,1000,910,9.0,45,Low,TRUE
+Personal details,910,835,8.2,190,Low,TRUE
+Identity verification,835,650,22.2,420,High,TRUE
+Bank Identity creation,650,590,9.2,180,Medium,TRUE
+Current account setup,590,455,22.9,360,High,TRUE
+George activation,455,420,7.7,150,Medium,TRUE

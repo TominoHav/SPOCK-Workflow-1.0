@@ -1,0 +1,113 @@
+workflow: "problems"
+version: "0.1.0"
+owner: "igor.tadic"
+kind: fixed
+pattern: sequential
+agent: hypothesis-designer
+composed_into:
+  workflow: discovery
+  at_stage: 2
+input:
+  description: "An accepted initiative brief (A1) and problem material supplied by the user (A2)"
+output:
+  description: "The run's prioritised opportunities (A4)"
+steps:
+  - id: material-intake
+    agent: hypothesis-designer
+    skill: material-intake
+    tools: []                             # the quarantine boundary, as the SKILL holds it
+    # **The agent running this step holds more than the step does.** One agent runs stage 2, so intake's
+    # narrower capability list shares the Opportunity Designer's host unit, and the User picks once for
+    # the stage. The skill's own capability list above stays empty.
+    requires:
+      - A1
+      - A2                                # required; the stage does not start without it
+    produces:
+      - A2b
+    records:
+      - intake-record
+    gate:
+      checker: independent
+      criteria:
+        - output_matches_contract
+        - every_observation_ref_resolves_into_A2   # C35
+
+  - id: hypothesis-authoring
+    agent: hypothesis-designer
+    skill: hypothesis-authoring
+    requires:
+      - A2b                               # NOT A2 — authoring never reads raw material
+    produces:
+      - A3
+    records:
+      - hypothesis-set
+    gate:
+      checker: independent
+      criteria:
+        - output_matches_contract
+        - evidence_present_or_unrated     # C1
+        - no_reference_outside_A2         # C2
+
+  - id: opportunity-framing
+    agent: hypothesis-designer
+    skill: opportunity-framing
+    since: 2026-08-26                     # the step joined the contract here; stages accepted before it
+                                          # are not asked for an artifact it did not then produce
+    requires:
+      - A3                                # NOT A2 and NOT A2b — one step further out than the boundary
+      - A1
+    produces:
+      - A3b
+    records:
+      - framed-opportunity-set
+    gate:
+      checker: independent
+      criteria:
+        - every_hypothesis_framed_exactly_once      # C115
+        - supplied_answer_carries_its_basis         # C116
+        - market_factors_deferred_not_unknown       # C117
+        - alternatives_empty_with_the_reason        # C118
+
+  - id: prioritisation
+    agent: hypothesis-designer
+    skill: prioritisation
+    requires:
+      - A3b
+    produces:
+      - A4
+    records:
+      - prioritised-opportunity-set
+    gate:
+      checker: independent
+      criteria:
+        - cardinalities_hold              # C27 — primary 1..3, secondary 0..5
+        - every_opportunity_placed_exactly_once
+        - parked_retained                 # C29
+
+quality_gate:
+  id: Q2
+  runs: "node .github/scripts/check.mjs {runs_root}/{run_id}"
+  checks: [C1, C2, C27, C33, C34, C35, C37, C39, C52, C53, C69, C82, C115, C116, C117, C118, C137, C159, C172, C177, C193]
+  # every check §7.4 marks `all` — kept in step with the gate model by C44
+  universal: [C6, C14, C17, C18, C19, C22, C23, C25, C28, C29, C30, C32, C36, C38, C40, C51, C62, C65, C78, C80, C92, C97, C98, C99, C100, C104, C107, C108, C109, C112, C122, C138, C139, C143, C151, C162, C163, C167, C168, C169, C170, C180, C189, C187, C206]
+
+human_gates:
+  - id: G2
+    kind: review-and-refine               # not approve/reject
+    reviewers:
+      - actor: researcher
+        governs: evidence
+        decides: "is each opportunity well formed and correctly evidenced"
+      - actor: product-manager
+        governs: scope
+        decides: "which opportunities does this run pursue"
+    note: "Neither reviewer overrules the other. They answer different questions about one list."
+
+hard_stops:
+  - problem_material_missing              # A2 is required; no default, no placeholder
+  - problem_material_agent_produced       # C34
+  - no_primary_problem                    # at least one is required
+  - trace_missing
+  - required_human_signoff_missing
+
+runtime_routing: forbidden

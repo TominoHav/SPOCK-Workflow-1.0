@@ -1,0 +1,172 @@
+workflow: "competitive-analysis"
+version: "0.1.0"
+owner: "igor.tadic"
+kind: fixed
+pattern: sequential
+agent: competitive-analysis
+composed_into:
+  workflow: discovery
+  at_stage: 3
+input:
+  description: "An accepted initiative brief (A1) and the run's prioritised opportunities (A4)"
+output:
+  description: "A competitive synthesis (A7) — what the market means for these opportunities"
+
+# **Stage 2 named a contract from the day it was composed and stage 3 never did.** Discovery declared
+# `composes: competitive-analysis` with no file behind it, so the one workflow in this repository that
+# reaches outward had its steps, its quarantine boundary, its gate and its hard stops written down
+# nowhere a reader could find them. C44 skipped it by an explicit escape in its own code — a composition
+# with no contract was allowed to pass — which made the omission invisible to the build that exists to
+# catch exactly this. The escape is gone with this file.
+#
+# **This is the only workflow that reaches outward**, and the two rules that follow from it are here
+# rather than in prose: nothing authors from raw external text, and nothing fetches and writes the shared
+# store in one step.
+
+steps:
+  - id: landscape-mapping
+    stage: "3.1"
+    agent: competitive-analysis
+    skill: landscape-mapping
+    requires:
+      - A1
+      - A4
+    produces:
+      - A5
+    records:
+      - landscape-map
+    writes_to: S1
+    bounds:
+      participants: 25
+      search_iterations: 8
+    gate:
+      checker: independent
+      criteria:
+        - output_matches_contract
+        - participants_typed_and_keyed            # C54
+        - deep_dive_decisions_carry_reasons       # C55
+        - participant_and_card_floors_hold        # C75
+        - three_trend_classes_present             # C81
+        - representatives_carry_standing          # C88
+        - egress_regime_named                     # C76
+        - no_free_roam_write_to_S1                # C24
+        - authors_only_from_bridge_extract        # the guardrail, decided by no check
+
+  - id: market-content-extract
+    position: none                       # not a step in the sequence, and it owns no stage number
+    agent: competitive-analysis
+    skill: market-content-extract
+    tools: []                            # the quarantine boundary, and the empty list IS the control
+    requires: []                         # handed raw page text by the step that fetched it
+    produces: []                         # a structured extract, consumed by 3.1 and 3.2, never a run artifact
+    records:
+      - market-content-extract
+    serves:
+      - landscape-mapping
+      - deep-dive
+    # **The bridge sits between fetch and authoring for BOTH researching steps**, which is why it carries
+    # no position. Reading it as step two of four would say the landscape is mapped before anything is
+    # extracted, and the guardrail on 3.1 says the opposite: it authors only from the extract.
+    gate:
+      checker: independent
+      criteria:
+        - output_matches_contract
+        - facts_only_no_confidence
+        - no_input_lowers_the_floor      # B9 — declared in §9.3 and decided by no check
+
+  - id: deep-dive
+    stage: "3.2"
+    agent: competitive-analysis
+    skill: deep-dive
+    requires:
+      - A5
+    produces:
+      - A6
+    records:
+      - deep-dive-cards
+    # **One record per participant, and the singular `card:` on each — PD163, 24 August.** §6.7 has
+    # declared both shapes since v1.25.0 and nothing said which to write, so the two runs that produced
+    # cards produced them differently: `2026-04-card-disputes` wrote ten records with one card each and
+    # `2026-06` wrote one record holding eight.
+    #
+    # **The single-record shape cannot be added to.** check.mjs folds a production record onto its artifact
+    # first-wins: a record carrying `cards:` sets the list once and a second one is dropped with no message,
+    # and only the singular `card:` appends. On 24 August a second deep-dive round wrote three cards that
+    # sat on disk, cited and joined, while every content check read eight. Nothing failed.
+    #
+    # **A second round is not exotic.** C75's aim for a searched market equals the bound below, so a market
+    # with nothing fresh to reuse reaches it in one production only if every branch succeeds; a second
+    # production is how a failed branch is made up.
+    record_shape: one_per_participant     # `item_id` is the identity key; the record carries `card:`
+    writes_to: S1
+    bounds:
+      participants_researched: 10
+      sources_per_card: 10
+      wall_clock_minutes: 90
+    gate:
+      checker: independent
+      criteria:
+        - reused_card_shows_researched_at         # C8
+        - stale_card_re_researched_not_edited     # C9
+        # **This criterion named a floor of two distinct publisher keys until 24 August, and the number was
+        # wrong.** The superseded wording is not quoted here, because C94 refuses it anywhere in this file
+        # and it is right to: a historical note carrying the old string is the next reader's wrong bound.
+        # §3.2 of the Competitive Analysis Standards carries the floor and C60 reads the version the stage
+        # recorded, falling back to two only for a stage recording a version below v0.10. **The number is
+        # deliberately not written here.** It was raised at v0.10, lowered at v0.16 on 11 September 2026
+        # because no run had ever met it, and this comment stated the superseded figure for the hours in
+        # between — which is exactly the misreading the paragraph below warns an operator against. From
+        # v0.17 a run whose record holds a supplied market is held to fewer, with the primary kept, and the
+        # criterion was renamed on 14 September 2026 to say that the floor has two values.
+        # AU-22 corrected the same figure in both agent wrappers and in deep-dive/SKILL.md on 23 August and
+        # did not reach this file, because `rule-echoes.yaml` enrols those three surfaces and not this one:
+        # a contract restates a gate criterion by name, which is a restatement nothing was watching. An
+        # operator briefing 3.2 from here would set a floor of two and have every card refused at Q3.
+        - four_independent_sources_per_card_two_if_supplied_one_primary  # C60
+        - confidence_recomputed_not_read          # C66
+        - capability_claim_and_pricing_floors     # C86
+        - no_free_roam_write_to_S1                # C24
+        - never_fetch_and_write_store_in_one_step # the guardrail, decided by no check
+
+  - id: synthesis
+    stage: "3.3"
+    agent: competitive-analysis
+    skill: synthesis
+    tools: []                            # works on the cards; it reaches nothing
+    requires:
+      - A6
+      - A4
+    produces:
+      - A7
+    records:
+      - competitive-synthesis
+    bounds:
+      elements_per_category: 7
+    gate:
+      checker: independent
+      criteria:
+        - every_element_traces_to_a_card          # C3
+        - standards_rest_on_two_participants      # C56
+        - verdict_is_four_parts                   # C84
+        - standard_tier_matches_its_count         # C87
+        - facet_finding_floor_holds               # C101
+        - A7_never_written_to_S1                  # the run-scoped contract and an empty tool list
+
+quality_gate:
+  id: Q3
+  runs: "node .github/scripts/check.mjs {runs_root}/{run_id}"
+  checks: [C3, C8, C9, C24, C54, C55, C56, C60, C66, C75, C76, C81, C84, C86, C87, C88, C101, C137, C181, C182, C184, C190]
+  # every check §7.4 marks `all` — kept in step with the gate model by C44
+  universal: [C6, C14, C17, C18, C19, C22, C23, C25, C28, C29, C30, C32, C36, C38, C40, C51, C62, C65, C78, C80, C92, C97, C98, C99, C100, C104, C107, C108, C109, C112, C122, C138, C139, C143, C151, C162, C163, C167, C168, C169, C170, C180, C189, C187, C206]
+
+human_gates: []
+# **Stage 3 has no human gate, by decision (PD27), and the empty list is the statement.** Q3 is its whole
+# acceptance. An absent key would read as an omission; this reads as a choice somebody made.
+
+hard_stops:
+  - authored_from_raw_external_text     # the quarantine boundary; the privileged step never sees the page
+  - egress_destination_unnamed          # deny-by-default — with no allow list the stage reaches nothing
+  - free_roam_write_to_the_store        # C24; S1 outlives every run
+  - trace_missing
+
+runtime_routing: forbidden

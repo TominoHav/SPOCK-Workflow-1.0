@@ -1,0 +1,324 @@
+# The regulatory areas: for each, the named regimes in it and which dossier holds the evidence behind it.
+# Read by regmap.mjs, which writes specifications/REGMAP.md from it, and by derive.mjs, check.mjs, screening-inputs.mjs, content-register.mjs and facts.mjs.
+# Edited by hand when an area or a regime is added, changed or withdrawn; then run `node .github/scripts/regmap.mjs --write`.
+# Checked by C119, which fails when specifications/REGMAP.md is not what this file and the skills' bindings generate.
+
+version: "0.1"
+owner: ceska-sporitelna
+written_by: igor.tadic
+date: "2026-08-27"
+
+# The mechanism — area-generic, read by every skill that reads an area.
+mechanism:
+  body: compliance/compliance-guidelines.md
+
+# ── the four areas ───────────────────────────────────────────────────────────────────
+#
+# `source` says who supplied the card: `cs_card` means ČS supplied it, `authored_here` means it was written
+# from public law because ČS has supplied none. The build reads it so a card ČS sends replaces ours; no output
+# prints it.
+
+areas:
+  - id: A1
+    name: Compliance, conduct and product regulation
+    name_cs: Compliance, pravidla jednání a produktová regulace
+    body: compliance/area-compliance.md
+    dossier: specifications/regulatory-research/compliance.md
+    source: cs_card
+    source_status: unconfirmed          # the card self-verifies a date, which is why this is not `approved`
+    supplied: "2026-08-26"
+    transcript: specifications/regulatory-research/regulatory-map-compliance.md
+
+  - id: A2
+    name: GDPR and privacy
+    name_cs: GDPR a ochrana osobních údajů
+    body: compliance/area-gdpr.md
+    dossier: specifications/regulatory-research/gdpr.md
+    source: authored_here
+    source_status: unreviewed
+    supplied: "2026-08-27"
+    note: "The regulatory concern producers raise most often, and the area with no ČS card. This is the one most worth ČS replacing."
+
+  - id: A3
+    name: Legal and contracts
+    name_cs: Právo a smlouvy
+    body: compliance/area-legal.md
+    dossier: specifications/regulatory-research/legal.md
+    source: authored_here
+    source_status: unreviewed
+    supplied: "2026-08-27"
+    note: "Carries the one live gap in the four — an EU application date that has passed with the national implementation not confirmed as in force."
+
+  - id: A4
+    name: ICT and security
+    name_cs: ICT a bezpečnost
+    body: compliance/area-ict-security.md
+    dossier: specifications/regulatory-research/ict-security.md
+    source: authored_here
+    source_status: unreviewed
+    supplied: "2026-08-27"
+
+# ── what is not covered, and which of the two kinds ──────────────────────────────────
+#
+# An area nobody chose to cover and an area we meant to cover and could not are different facts, and a
+# reader acts differently on each. Both appear so that silence is never mistaken for clearance.
+
+out_of_scope:
+  - id: X1
+    name: AI regulation
+    disposition: routed
+    reason: "Out as an area by decision, and routed rather than screened: an AI-driven recommendation, scoring or client decision is the Compliance card's escalation trigger C-E9. No card names the role a trigger routes to, and the compliance section derived for each solution raises only the triggers that fire on an unresolved sub-domain, which C-E9 does not, so no section raises it."
+    primary: Regulation (EU) 2024/1689, as amended by Regulation (EU) 2026/1744
+
+  - id: X2
+    name: Outsourcing beyond ICT
+    disposition: routed
+    reason: "DORA's ICT third-party chapter is inside A4. Outsourcing that is not ICT is routed rather than screened, and the EBA outsourcing guidelines are named on the A3 card as a pointer."
+
+  - id: X3
+    name: Scheme rules and market infrastructure
+    disposition: uncovered
+    reason: "CERTIS, the EPC rulebook, ISO 20022 and card scheme agreements are not regulation and are in none of the four areas. They would have belonged to the `banking-constraints` body, which is retired and will not be written, so they are uncovered with no owner rather than pending one. A screen that returns clean has said nothing about any of them, and nothing now claims it will."
+
+# ── the named regimes ────────────────────────────────────────────────────────────────
+#
+# Pointers with a status. `state` is the field a person scans: `in_force` is settled, `applies_from` has a
+# fixed future date, `not_yet_law` has no fixed date, `moving` is under revision. Nothing here states what
+# a regime requires — that is the area body's job and the dossier's evidence.
+
+regimes:
+  - id: R01
+    name: MiFID II
+    citation: Directive 2014/65/EU
+    national: Act No. 256/2004 Coll. (ZPKT)
+    areas: [A1]
+    state: in_force
+    since: "2018-01-03"
+
+  - id: R02
+    name: PRIIPs
+    citation: Regulation (EU) No 1286/2014
+    areas: [A1]
+    state: in_force
+    since: "2018-01-01"
+
+  - id: R03
+    name: Insurance Distribution Directive
+    citation: Directive (EU) 2016/97
+    national: Act No. 170/2018 Coll.
+    areas: [A1]
+    state: in_force
+
+  - id: R04
+    name: PSD2
+    citation: Directive (EU) 2015/2366
+    national: Act No. 370/2017 Coll.
+    areas: [A1, A4]
+    state: in_force
+    since: "2018-01-13"
+    note: Strong customer authentication at §223, required in Czechia from 1 January 2021
+
+  - id: R05
+    name: Consumer Credit Directive
+    citation: Directive 2008/48/EC
+    national: Act No. 257/2016 Coll.
+    areas: [A1]
+    state: in_force
+    superseded_by: R06
+
+  - id: R06
+    name: Consumer Credit Directive 2
+    citation: Directive (EU) 2023/2225
+    national: amendment to Act No. 257/2016 Coll.
+    areas: [A1]
+    state: applies_from
+    applies: "2026-11-20"
+    note: The nearest hard date in the map. Brings buy-now-pay-later into scope
+
+  - id: R07
+    name: European Accessibility Act
+    citation: Directive (EU) 2019/882
+    national: Act No. 424/2023 Coll.
+    areas: [A1]
+    state: in_force
+    since: "2025-06-28"
+    note: "Consumer banking services expressly in scope. Producers do not name accessibility unprompted, although the runs are client-facing digital journeys"
+
+  - id: R08
+    name: SFDR
+    citation: Regulation (EU) 2019/2088
+    areas: [A1]
+    state: moving
+    note: Under review during 2026 toward a simplified product categorisation
+
+  - id: R09
+    name: Taxonomy Regulation
+    citation: Regulation (EU) 2020/852
+    areas: [A1]
+    state: in_force
+
+  - id: R10
+    name: Unfair Commercial Practices Directive
+    citation: Directive 2005/29/EC
+    national: Act No. 634/1992 Coll.
+    areas: [A1, A3]
+    state: in_force
+
+  - id: R11
+    name: Payment Accounts Directive
+    citation: Directive 2014/92/EU
+    areas: [A1]
+    state: in_force
+
+  - id: R12
+    name: EBA product oversight and governance guidelines
+    citation: EBA/GL/2015/18, amended by EBA/GL/2026/07
+    areas: [A1]
+    state: in_force
+    since: "2017-01-03"
+    note: Amended 30 June 2026 to cover ESG features and greenwashing risk in retail banking products
+
+  - id: R13
+    name: Retail Investment Strategy
+    citation: amends MiFID II, IDD, Solvency II, UCITS, AIFMD and PRIIPs
+    areas: [A1]
+    state: not_yet_law
+    note: Member States approved 12 June 2026, publication expected September 2026
+
+  - id: R14
+    name: GDPR
+    citation: Regulation (EU) 2016/679
+    national: Act No. 110/2019 Coll.
+    areas: [A2]
+    state: in_force
+
+  - id: R15
+    name: ePrivacy Directive
+    citation: Directive 2002/58/EC
+    national: Act No. 127/2005 Coll., §89(3)
+    areas: [A2]
+    state: in_force
+    since: "2022-01-01"
+    note: Czech opt-in model for cookies since 1 January 2022. The ePrivacy Regulation was never adopted
+
+  - id: R16
+    name: Banking secrecy
+    citation: Act No. 21/1992 Coll. on banks
+    areas: [A2, A3]
+    state: in_force
+
+  - id: R17
+    name: AML
+    citation: Act No. 253/2008 Coll.
+    areas: [A2, A3]
+    state: in_force
+
+  - id: R18
+    name: Data Act
+    citation: Regulation (EU) 2023/2854
+    areas: [A2, A4]
+    state: in_force
+
+  - id: R19
+    name: Civil Code — consumer and distance financial services contracts
+    citation: Act No. 89/2012 Coll., §1810 to §1867 and §1841 to §1851
+    areas: [A3]
+    state: in_force
+
+  - id: R20
+    name: Distance marketing of consumer financial services
+    citation: Directive (EU) 2023/2673
+    areas: [A3]
+    state: moving
+    applies: "2026-06-19"
+    note: "**The live gap.** The EU application date has passed and repealed Directive 2002/65/EC. The Czech transposing amendment was still moving through Parliament during 2026 and its status should be confirmed with ČS legal"
+
+  - id: R21
+    name: eIDAS
+    citation: Regulation (EU) No 910/2014
+    national: Act No. 297/2016 Coll.
+    areas: [A3, A4]
+    state: in_force
+
+  - id: R22
+    name: eIDAS 2 — EU Digital Identity Wallet
+    citation: Regulation (EU) 2024/1183
+    areas: [A2, A3, A4]
+    state: applies_from
+    note: "Member State wallets expected during late 2026, private-sector acceptance obligations roughly twelve months later. Banks carry a mandatory acceptance obligation"
+
+  - id: R23
+    name: Financial Arbitrator
+    citation: Act No. 229/2002 Coll.
+    areas: [A3]
+    state: in_force
+
+  - id: R24
+    name: Copyright
+    citation: Act No. 121/2000 Coll.
+    areas: [A3]
+    state: in_force
+
+  - id: R25
+    name: DORA
+    citation: Regulation (EU) 2022/2554
+    areas: [A4]
+    state: in_force
+    since: "2025-01-17"
+    note: First nineteen critical ICT third-party providers designated 18 November 2025
+
+  - id: R26
+    name: NIS2
+    citation: Directive (EU) 2022/2555
+    national: Act No. 264/2025 Sb., the Cybersecurity Act
+    areas: [A4]
+    state: in_force
+    since: "2025-11-01"
+    note: "Czech rules go beyond the directive — all incidents reportable, extensive supply chain obligations. Registration and obligation clocks running through 2026"
+
+  - id: R27
+    name: Strong customer authentication technical standard
+    citation: Delegated Regulation (EU) 2018/389
+    areas: [A4, A1]
+    state: in_force
+
+  - id: R28
+    name: EBA ICT and security risk management guidelines
+    citation: EBA/GL/2019/04
+    areas: [A4]
+    state: in_force
+
+  - id: R29
+    name: EBA outsourcing guidelines
+    citation: EBA/GL/2019/02
+    areas: [A4, A3]
+    state: in_force
+
+  - id: R30
+    name: Cyber Resilience Act
+    citation: Regulation (EU) 2024/2847
+    areas: [A4]
+    state: applies_from
+    note: Phasing in. Reaches software placed on the market rather than software merely used
+
+  - id: R31
+    name: PSD3 and the Payment Services Regulation
+    citation: successor to Directive (EU) 2015/2366
+    areas: [A1, A4]
+    state: not_yet_law
+    note: "Political agreement November 2025, not applicable law as at 27 August 2026. Applies around 21 months after publication. PSD2 continues to govern"
+
+  - id: R32
+    name: FiDA — financial data access
+    citation: proposed regulation
+    areas: [A1, A2]
+    state: not_yet_law
+    note: Adoption expected mid-2026, obligations phased from 2027
+
+  - id: R33
+    name: AI Act
+    citation: Regulation (EU) 2024/1689, amended by Regulation (EU) 2026/1744
+    areas: []
+    out_of_scope: X1
+    state: applies_from
+    note: "**Verified 27 August 2026.** The Digital Omnibus on AI, Regulation (EU) 2026/1744 of 8 July 2026, defers the Annex III high-risk obligations from 2 August 2026 to 2 December 2027, and Annex I embedded systems to 2 August 2028. Creditworthiness and credit scoring are Annex III high-risk. Prohibited practices applied from 2 February 2025 and general-purpose model rules from 2 August 2025"

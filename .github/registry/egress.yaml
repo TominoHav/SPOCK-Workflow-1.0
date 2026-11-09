@@ -1,0 +1,108 @@
+# The one approved search destination and the research regimes a run can work under, with what each permits.
+# Read by check.mjs, which holds a run's market research to the regime it claims, and by gates.mjs and repo-check.mjs.
+# Edited by hand only when a destination or a regime is approved or withdrawn.
+# Checked by C76 at the market stage's gate, which refuses a document claiming a regime this file does not declare.
+
+version: "0.1"
+owner: ceska-sporitelna
+written_by: igor.tadic
+
+# The ČS-approved endpoint. Null until Engineering names one, and C76 refuses `egress_basis: approved`
+# on any artifact while it stays null.
+# Pilot default chosen by the product owner, to be narrowed. A ČS security review of the search provider
+# is pending. Narrowing it is the follow-up, and until that happens **an artifact carrying
+# `egress_basis: approved` means the regime was in force, not that anyone assessed the endpoint.** Saying
+# otherwise later would be the overclaim this file's own marker exists to prevent.
+approved_endpoint: >
+  the web search the installed VS Code extension performs — ms-vscode.vscode-websearchforcopilot,
+  granting the `websearch` tool, reaching Tavily by default or Bing where `websearch.preferredEngine`
+  says so, under a key held in VS Code's secret storage and never in this repository
+approved_named_at: "2026-08-30"
+approved_named_by: igor.tadic
+approved_basis: >
+  **Open by default and narrowed later, which is a decision and not an assessment.** The pilot was
+  blocked from 7 August until a destination was named, and a control that blocks everything while
+  nobody can approve anything is a control nothing is learned from. The narrowing this owes: which search
+  provider ČS will accept, whether queries may reach it carrying real material, and whether a managed
+  policy at the bank overrides the extension entirely.
+
+# The regime in force for runs today.
+current_regime: approved
+
+regimes:
+  - id: approved
+    what: a ČS-approved search endpoint, named above, with whatever credentials it needs
+    permits_real_material: true
+    status: named on 30 August 2026, as approved_endpoint above
+
+  - id: supplied
+    what: >
+      Nothing was searched. The destinations are the addresses a person wrote into the run's own
+      `3-competitive-analysis/supplied/` file, which the workflow enumerated onto the run record with its
+      hash and its counts. The stage retrieves those addresses and records what it could not reach.
+      **An allow list of addresses a named person wrote down is a NARROWER control than an allow list
+      naming a search provider**, so deny-by-default is strengthened here rather than relaxed, and the two
+      narrowings this file has owed since 30 August close with it: which search provider ČS will accept
+      stops being a question when nothing searches, and whether a query may carry real material stops
+      being one when no query leaves at all.
+    permits_real_material: true
+    reason_permitted: >
+      The addresses are the customer's own and the material retrieved from them is the market they asked
+      about. **This regime is recorded by a run that worked this way and is never declared by the build**
+      — `current_regime` above stays as it is, because a build that declares nothing is searched while a
+      search extension is installed records the same untruth in the other direction. The producer records
+      what it did.
+
+  - id: fixture
+    what: >
+      No fetch occurred. The artifact's external sources are invented for a fixture run, which
+      .github/registry/fixtures.yaml declares `material: fabricated` per run and C149 checks over the whole
+      set. Carried so a reader, and S1, can tell an invented source from a retrieved one.
+      **This cited fixtures/README.md until 29 August**, and that file named three runs while ten were on
+      disk — the control rested on a sentence that had to be re-typed every time a run was committed.
+    permits_real_material: false
+    reason_permitted: nothing leaves, because nothing is fetched
+
+  - id: pilot-test
+    what: >
+      The substrate's own web search and fetch, allowed as the single entry on the allow list so a
+      fabricated run can exercise the research chain. Deny-by-default is unchanged; this is one named
+      destination rather than the absence of a restriction.
+    permits_real_material: true
+    reason_permitted: >
+      **Lifted by Igor on 28 August 2026, and it is the decision this file said nobody had asked for.**
+      Testing moves to real material with real testers at ČS, so a regime legitimate only for fabricated
+      runs would have made every run from here non-conforming on its first line.
+
+      What this used to guarantee: every committed run was fictional by construction, so a landscape
+      map's queries carried nothing of the bank's and no rule was needed about what they contained.
+      **That guarantee is gone and nothing mechanical replaces it.** What replaces it is a rule in
+      `landscape-mapping` about what a query may contain, and a rule is weaker than a construction. It
+      is written in the skill, it is stated here, and it is not to be described as equivalent.
+
+      **What may leave in a query: the market, the product category, and named public competitors.**
+      What may never leave: any wording taken from the brief, the problem material, or an artifact of
+      the run. A query is composed from what a person could have typed into a search engine without
+      reading anything confidential.
+    set_by: Igor Tadic
+    set_at: 2026-08-12
+    reaffirmed_at: 2026-08-13
+    reaffirmed_note: >
+      The stakeholder instructed on 13 August that web access is unrestricted until he says otherwise,
+      and that this applies to the pilot. **No change was needed to make that true and none was made.**
+      `pilot-test` already resolves to the substrate's own search with no site list inside it: the first
+      agent-driven landscape map ran the same day and reached fifteen domains across four countries
+      without a single denial. What the instruction changes is the record, which said 12 August and a
+      provisional, and now says the stakeholder has confirmed it stands.
+
+      **The paragraph that stood here said `permits_real_material` stays false, and it was written on
+      13 August about a field that changed on 28 August.** It was still being read as current by both
+      competitive-analysis wrappers seventeen days later, each telling the agent `false` while the entry
+      above it read `true`. Removed 30 August 2026. The field is the statement; a note beside it that
+      restates a value is a second place for it to be wrong, which is the whole of `C94`'s subject.
+
+      **What cannot be done from this repository.** The Agent Blueprint's R6.4-1 and R6.4-3 require
+      deny-by-default with named destinations, and that document is owned upstream and read-only here.
+      `pilot-test` satisfies the letter of both by being one named entry on an allow list. Declaring the
+      absence of an allow list would breach them, so the regime keeps its shape and its mark, and the
+      artifacts keep saying which regime they researched under.

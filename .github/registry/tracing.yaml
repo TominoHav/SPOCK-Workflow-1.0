@@ -1,0 +1,195 @@
+# The trace capture: which spans and attributes trace.mjs keeps from the OpenTelemetry file VS Code Copilot Chat writes, and what it drops.
+# Read by trace.mjs and metrics.mjs.
+# Edited by hand when the spans worth keeping change.
+# Checked by the suite's trace arms, which run trace.mjs against a sample trace.
+
+version: "0.2"
+owner: igor.tadic
+observed_against_a_real_trace: true      # read against two real captures, the later one written by Copilot Chat 0.66.0
+
+# ── Where a trace goes ───────────────────────────────────────────────────────────────
+#
+# A collector is a destination like any other and would be declared under the same deny-by-default egress
+# rule as the search endpoint (egress.yaml). **There is no collector**: the exporter writes to a local
+# file, on purpose, so a first trace depends on no network destination and nothing ČS has to approve.
+destination:
+  kind: file
+  path: .copilot-traces/otel.jsonl        # gitignored; raw, unreduced, customer material
+  endpoint: null                          # no collector configured, and none is needed to start
+  egress: none                            # nothing crosses a network; if this ever changes it is a new destination decision
+  retained_to: {runs_root}/{run_id}/traces/      # what survives the reduction, and the only part committed
+
+# ── The tolerance (AB-48) ────────────────────────────────────────────────────────────
+#
+# **Recording is fail-closed and exporting is best-effort**, and collapsing the two is how an audit-trail
+# control ends up switched off: a collector outage must not stop the work. An exemption nobody bounded is
+# not an exemption, so the bound is stated with a period, a threshold, an owner and a disposition.
+export_tolerance:
+  scope: the trace exporter for this repository's Copilot sessions
+  period: one calendar month
+  threshold: 5 sessions may fail to produce a trace before the tolerance is breached
+  owner: igor.tadic
+  disposition_on_breach: >
+    Stop treating trace coverage as evidence of anything and say so on the affected runs, rather than
+    reporting a coverage figure computed over sessions that never emitted. The work continues; the claim
+    does not.
+  measured_by: nothing yet — coverage cannot be measured until a session has emitted a file at all
+
+# ── The declared attribute set ───────────────────────────────────────────────────────
+#
+# **Everything not named here is dropped by the reducer** rather than carried and ignored. A trace store
+# holding more than its declared set is a trace store nobody can make a statement about.
+#
+# `classification` is the data class of the VALUE, and it is why this list is a registry entry rather than
+# a constant in a script: an attribute whose classification cannot be established is refused rather than
+# truncated (AB-47). `derived` means the reducer computes it from the span's own timestamps.
+# ── What actually arrives, read off the first capture on 9 September 2026 ────────────
+#
+# **The `spans:` block below was written against a documented shape nobody had ever seen, and nothing that
+# arrives is a span.** The 8 September run produced 143 MB and 12,744 records, and every one of them is an
+# OpenTelemetry **log record**: `hrTime`, `spanContext` carrying the trace and span ids, `instrumentationScope`,
+# a flat `attributes` map, and `_body`, a label of at most 52 characters naming the event and its tool or model
+# (`copilot_chat.tool.call: read_file`). No record in either capture carries prompt text. The reducer refused
+# all of it and the run reported zero spans.
+#
+# **Six event kinds carry everything**, keyed on `event.name`:
+#
+#   gen_ai.client.inference.operation.details   1092   one model call
+#   copilot_chat.edit.survival                   868   whether an edit survived
+#   copilot_chat.tool.call                       714   one tool call
+#   copilot_chat.agent.turn                      677   one turn
+#   copilot_chat.session.start                    57   one session
+#   copilot_chat.edit.hunk.action                 13   one hunk accepted or reverted
+#
+# **The cost fields the metrics report has never had are all here**: `gen_ai.usage.input_tokens` and
+# `output_tokens` on 1,769 records each, the request and response model on 1,092. **Neither cache counter
+# appears at all**, so the cache half of that report stays empty and says so rather than reading zero.
+#
+# **And the identifying attributes are here too**, which is why the never-kept list below matters more than
+# it did when nothing arrived: the repository remote, the org, the branch, the commit and the relative path
+# of the file being edited ride on 881 records each.
+log_records:
+  - event: copilot_chat.session.start
+    what: one session, and the join key every other record carries
+    keep:
+      - { attribute: session.id, type: string, classification: identifier }
+      - { attribute: gen_ai.agent.name, type: string, classification: configuration }
+      - { attribute: gen_ai.request.model, type: string, classification: configuration }
+
+  - event: copilot_chat.agent.turn
+    what: one turn — the unit a person experiences
+    keep:
+      - { attribute: turn.index, type: integer, classification: metric }
+      - { attribute: tool_call_count, type: integer, classification: metric }
+
+  - event: gen_ai.client.inference.operation.details
+    what: one model call, and the only place a token count exists
+    keep:
+      - { attribute: gen_ai.request.model, type: string, classification: configuration }
+      - { attribute: gen_ai.response.model, type: string, classification: configuration }
+      - { attribute: gen_ai.operation.name, type: string, classification: execution_metadata }
+      - { attribute: gen_ai.usage.input_tokens, type: integer, classification: metric }
+      - { attribute: gen_ai.usage.output_tokens, type: integer, classification: metric }
+      - { attribute: gen_ai.request.max_tokens, type: integer, classification: configuration }
+      - { attribute: gen_ai.request.temperature, type: number, classification: configuration }
+      - { attribute: gen_ai.response.finish_reasons, type: string, classification: execution_metadata }
+
+  - event: copilot_chat.tool.call
+    what: one tool call — what the tool census and the containment reading are built from
+    keep:
+      - { attribute: gen_ai.tool.name, type: string, classification: execution_metadata }
+      - { attribute: duration_ms, type: integer, classification: metric }
+      - { attribute: success, type: boolean, classification: execution_metadata }
+      - { attribute: error.type, type: string, classification: execution_metadata }
+
+# **The span shape below is kept and is not what arrives.** It is the documented OpenTelemetry GenAI
+# convention, and the day the extension emits spans this reducer reads them without a change. Deleting it
+# would leave the build with no statement of what it expected and no way to tell a version change from a
+# defect, which is the position 8 September was in.
+spans:
+  - name: invoke_agent
+    what: the root span — one agent invocation, which is the unit a trace covers (§8.1)
+    keep:
+      - { attribute: gen_ai.conversation.id, type: string, classification: identifier }
+      - { attribute: duration_ms, type: integer, classification: metric, derived: true }
+
+  - name: chat
+    what: one model call
+    keep:
+      - { attribute: gen_ai.request.model, type: string, classification: configuration }
+      - { attribute: gen_ai.response.model, type: string, classification: configuration }
+      - { attribute: gen_ai.usage.input_tokens, type: integer, classification: metric }
+      - { attribute: gen_ai.usage.output_tokens, type: integer, classification: metric }
+      - { attribute: gen_ai.usage.cache_read_input_tokens, type: integer, classification: metric }
+      - { attribute: gen_ai.usage.cache_creation_input_tokens, type: integer, classification: metric }
+      - { attribute: gen_ai.request.temperature, type: number, classification: configuration }
+      - { attribute: server.address, type: string, classification: destination }
+      - { attribute: duration_ms, type: integer, classification: metric, derived: true }
+
+  - name: execute_tool
+    what: one tool call — the span the containment rules are decided from
+    keep:
+      - { attribute: gen_ai.operation.name, type: string, classification: execution_metadata }
+      - { attribute: gen_ai.tool.name, type: string, classification: execution_metadata }
+      - { attribute: gen_ai.tool.type, type: string, classification: execution_metadata }
+      - { attribute: gen_ai.tool.call.id, type: string, classification: identifier }
+      - { attribute: error.type, type: string, classification: execution_metadata }
+      - { attribute: duration_ms, type: integer, classification: metric, derived: true }
+      # **The one that decides the quarantine, and the one that costs the most.** A tool's arguments say
+      # WHICH file was read, which is what makes "material-intake never reads A2 raw" mechanically
+      # decidable. It is only present because content capture is on, and it is prefix-matched because the
+      # parameter names are per-tool.
+      # **`keep_values` is the list of leaves whose VALUE is a locator.** Everything else under the prefix
+      # keeps its key and loses its value. Until 23 August (AU-04) the prefix kept every value, so a
+      # `createFile` span carried the file body it was handed and the reduction retained it — the one thing
+      # this whole registry exists to prevent. **The key is the evidence and the payload is not**: knowing
+      # that `createFile` ran on `fixtures/x/2-problems/1-problem-material.md` is what makes the quarantine
+      # decidable, and the bytes it wrote add nothing a gate can read.
+      - { attribute: "github.copilot.tool.parameters.*", type: string, classification: tool_arguments,
+          prefix: true, keep_values: [filePath, uri, url, query, path, pattern, glob] }
+
+# ── What is never kept, named rather than implied ────────────────────────────────────
+#
+# These are present in the raw file on current versions. The reducer drops them; naming them here is what
+# makes their absence from a retained trace a statement rather than an accident.
+#
+# **And the list is read, not admired.** Until 23 August (AU-30) nothing in the repository read this block:
+# the ban lived in prose, its only restatement was a hand-copied literal in the trace test that had already
+# lost `gen_ai.tool.definitions`, and a `keep:` entry contradicting the list would have been accepted and
+# retained. `declaredSet()` in `.github/scripts/trace.mjs` now compares the two halves of this file and
+# stops the reduction when they disagree, and the trace test derives its forbidden list from here.
+# ── The second source: the VS Code chat journal ─────────────────────────────────────────────────
+#
+# **The otel path has never emitted a byte, and both cost figures this project has came from here.** VS
+# Code writes an append-only journal of every chat session under its workspace storage, and it carries the
+# per-request token counts and the credit figure that OpenTelemetry does not have. A cost reader over otel
+# alone would print "no trace retained" on every run forever, including the only two runs with numbers.
+#
+# **This file is customer material from its first line, exactly as otel.jsonl is**, and more plainly: the
+# `message` field IS the user's prompt and `response` IS the model's reply. The reduction keeps six
+# scalars and nothing else, and `--journal` without `--write` retains nothing.
+#
+# **Observed against a real file**, which is the one thing the span set above cannot say about itself.
+journal:
+  kind: vscode_chat_session
+  path: "<workspaceStorage>/<workspace>/chatSessions/<session>.jsonl"
+  observed_against_a_real_file: true
+  keep:
+      - { attribute: copilotCredits, type: number, classification: metric }
+      - { attribute: promptTokens, type: integer, classification: metric }
+      - { attribute: completionTokens, type: integer, classification: metric }
+      - { attribute: modelId, type: string, classification: configuration }
+      - { attribute: requestId, type: string, classification: identifier }
+      - { attribute: timestamp, type: integer, classification: metric }
+  never_kept:
+    - message                        # the complete user prompt
+    - response                       # the model's reply
+    - result                         # tool results
+    - variableData                   # attached file bodies
+
+never_kept:
+  - copilot_chat.user_request        # the complete user prompt
+  - gen_ai.prompt                    # system instructions and message history
+  - gen_ai.completion                # model responses
+  - gen_ai.tool.definitions          # tool schemas
+  - gen_ai.tool.result               # tool results

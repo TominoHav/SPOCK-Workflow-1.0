@@ -1,0 +1,118 @@
+# The retired scoring model: the two standalone scores, the bodies that anchored their bands and the sub-dimensions left out, kept for the runs graded under it.
+# Read by scoring.mjs and content-register.mjs.
+# Edited by hand only to correct the record; no run is scored now.
+# Checked by C132, which fails when this file and the business logic disagree about the model.
+
+version: "0.2"
+owner: igor.tadic
+date: "2026-09-01"
+
+# **The date the band model landed.** An `A8b` produced before this was scored under the weighted model and
+# is read against that one. Nine committed runs sit before it, the newest 2026-08-28.
+landed: "2026-09-01"
+
+# **The day a band stopped being allowed to stand alone.** A band is a summary of reasoning the producer
+# already did, and the reasoning is more discriminating than its summary: on the first live run the two
+# bands put three of five solutions in identical positions on both scores and said nothing at all about
+# the three the decision was actually between. **This is not a finer scale.** A seven-point scale anchored
+# to nothing is a number with a decimal point on it, and no body anchors technical or delivery complexity.
+# What changed is that the facts each band was cut on are carried beside it, so four solutions at `Heavy`
+# are four different rows.
+separators_since: "2026-09-04"
+
+scores:
+  - id: strategic-alignment
+    name: Strategic alignment
+    asks: "How well this serves the strategy the brief committed to"
+    bands: .github/know-how/product/strategy-basis.md
+    note: >
+      Scored against the key result the brief's goals name and the link the person wrote between the two.
+      **It is scored on what the brief actually committed to, not on whether the solution sounds strategic.**
+    # **What placed the band, carried beside it rather than thrown away.** §4's table places this score on
+    # the product metric, the key result it leads to, and how many steps the chain takes. Every one of
+    # those is written by the producer to arrive at the band and then discarded, so five solutions arrive
+    # at G4 reading `Strong · Strong · Moderate · Strong · Weak`.
+    separates:
+      - { field: metric, what: "the product metric this solution moves" }
+      - { field: key_result, what: "the key result it leads to, from the brief's goals" }
+      - { field: chain_steps, what: "how many steps the chain takes, which is what §4's bands are cut on" }
+
+  - id: regulatory-complexity
+    name: Regulatory complexity
+    asks: "What the regulation adds to the cost of getting there"
+    bands: .github/know-how/compliance/compliance-guidelines.md
+    note: >
+      **The four levels behind this were written here rather than by ČS, and three of the four area cards
+      are ours too.** It reads the compliance section on the solution rather than a separate screen.
+    # **The counts the compliance section already holds.** §5's table places this score on the number of
+    # areas in play, whether any escalation trigger fired, and whether a mandatory client-facing artefact
+    # is required. On the live run four of five solutions came out `Heavy` because a card initiative puts
+    # three areas in play whatever the solution is, and the band then said nothing about the three the
+    # decision was actually between. These are the facts the band was derived from.
+    separates:
+      - { field: areas_in_play, what: "how many of the four regulatory areas this solution puts in play" }
+      - { field: sub_domains, what: "how many sub-domains its compliance section carries" }
+      - { field: unresolved, what: "how many entries it could not settle" }
+      - { field: escalation_fired, what: "whether any escalation trigger fired" }
+
+# ── Out of the model, with what each would have measured ───────────────────────────────────────────
+#
+# **Recorded so the decision is legible later, and reconsidered after the pilot.** Each carries the weight
+# it held in the weighted model, because the size of what was dropped is part of what was decided: these
+# five were 130 of the 200 points.
+left_out:
+  - id: opportunity-solution fit
+    former_axis: potential
+    former_weight: 35
+    would_have_measured: >
+      How squarely the solution answers the problem it binds to, as against answering a neighbouring
+      problem or a general one. **The largest single weight in the old model**, and the one whose absence
+      is least visible: a solution can bind an opportunity, read well and still not be an answer to it.
+    left_out_on: "2026-09-01"
+    left_out_by: igor.tadic
+    reconsider: after the pilot
+
+  - id: market differentiation
+    former_axis: potential
+    former_weight: 20
+    would_have_measured: >
+      Whether the solution does something the market's participants do not already do, read against the
+      competitor cards stage 3 produces. **Stage 3 still produces that evidence and nothing now scores
+      against it**, so the synthesis informs the person and not the number.
+    left_out_on: "2026-09-01"
+    left_out_by: igor.tadic
+    reconsider: after the pilot
+
+  - id: innovation opportunity
+    former_axis: potential
+    former_weight: 15
+    would_have_measured: >
+      Whether the solution opens something the bank could build on afterwards, as against solving the
+      problem and stopping. The smallest weight of the five and the most subjective; a band for it would
+      have needed a body nobody had drafted even before the retirement.
+    left_out_on: "2026-09-01"
+    left_out_by: igor.tadic
+    reconsider: after the pilot
+
+  - id: technical complexity
+    former_axis: difficulty
+    former_weight: 35
+    would_have_measured: >
+      What the build costs in engineering terms — systems touched, data moved, integrations required.
+      **This is the absence that costs most.** With it out, a three-year build and a three-week build score
+      identically on difficulty, and the only thing separating them is the person at G4 reading the
+      solutions themselves.
+    left_out_on: "2026-09-01"
+    left_out_by: igor.tadic
+    reconsider: after the pilot
+
+  - id: operational change
+    former_axis: difficulty
+    former_weight: 25
+    would_have_measured: >
+      What the bank's own people would have to do differently — process changes, retraining, new work
+      landing on a branch or a back office. A solution that is cheap to build and expensive to operate is
+      indistinguishable from a cheap one under the current model.
+    left_out_on: "2026-09-01"
+    left_out_by: igor.tadic
+    reconsider: after the pilot

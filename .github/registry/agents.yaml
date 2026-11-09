@@ -1,0 +1,426 @@
+# The design agents: each agent's skills with the capabilities and limits of each binding, its modes, and how it maps onto an agent file under .github/agents/ (substrate_mapping), with the purpose and trigger phrases its description is built from.
+# Read by agent-descriptions.mjs (each agent's description), operator.mjs, run-readme.mjs, advance.mjs, check.mjs, setup-check.mjs and registry-schema.mjs, among others.
+# Edited by hand when an agent, a binding, a grant, a purpose or a trigger phrase changes; then run `node .github/scripts/agent-descriptions.mjs --write`.
+# Checked by the repository checks C47 (every definition conforms to the schema), C85 (every agent file agrees with it, its description included) and C93 (each agent file mirrors its modes).
+
+version: "2.0"
+
+
+# **Modes (T15/PD155).** An agent's mode is a property of the INVOCATION, not a second agent: free roam is
+# the same role, the same skills and the same know-how with the workflow's machinery removed. `modes` is a
+# closed set — `discovery | free-roam` — declared here and mirrored in the wrapper, with C93 proving the
+# mirror. A behaviour described in a wrapper that neither registry holds is the class that let a malformed
+# model pin sit in six files for a week while every command stayed green.
+#
+# **`material-intake` carries `discovery` only, and that is a rule rather than a scope call.** It is the
+# quarantine boundary: untrusted material handled outside a workflow has no gate behind it and no intake
+# record downstream of it. The declaration sits on the BINDING, which is where §4.3 puts everything that
+# governs what work may reach.
+
+design_agents:
+  - id: product-manager
+    name: Product Manager
+    owner: igor.tadic
+    area: discovery
+    modes: [discovery, free-roam]
+    capability_ceiling: []
+    version: "0.1"
+    status: built            # stages 1, 4 and 5 built and specified
+    gates_held: [G1, G2, G4, G5b, G6, G7]
+    bindings:
+      - skill: brief-creation@0.1
+        capabilities: []
+        data_scope: [dialogue, know_how.brief-fields, runs]
+        pattern: elicitation-dialogue
+        built: true
+      # W3.2 — the screen. Both hold `[]`: they read the area cards and the run's own files and reach
+      # nothing, which is what lets a step that examines a description for regulatory reach sit on an
+      # agent whose ceiling is empty.
+      - { skill: ideation@0.1,          capabilities: [], pattern: single-shot,          built: true }
+      - { skill: mvp-option-design@0.1, capabilities: [], pattern: single-shot,          built: true }
+      - { skill: mvp-expansion@0.1,     capabilities: [], pattern: single-shot,          built: true }
+
+  - id: hypothesis-designer
+    name: Opportunity Designer
+    owner: igor.tadic
+    area: discovery
+    modes: [discovery, free-roam]   # material-intake is discovery-only, on its own binding below
+    capability_ceiling: []
+    version: "0.1"
+    status: built
+    owns_workflow: problems
+    bindings:
+      - skill: material-intake@0.1
+        capabilities: []                # THE quarantine boundary
+        modes: [discovery]              # and so is this — untrusted material is never handled outside a workflow
+        data_scope: [run_artifacts.A1, run_artifacts.A2]
+        pattern: quarantined-extract
+        built: true
+        substrate_agent: opportunity-designer   # one agent runs stage 2, so intake shares its host unit
+      - skill: hypothesis-authoring@0.1
+        capabilities: []
+        data_scope: [run_artifacts.A2b, know_how.evidence-standards]   # NOT A2
+        pattern: single-shot
+        built: true
+        substrate_agent: opportunity-designer
+      - skill: opportunity-framing@0.1
+        capabilities: []
+        data_scope: [run_artifacts.A3, run_artifacts.A1, know_how.opportunity-framing]   # NOT A2, NOT A2b
+        pattern: elicitation-dialogue
+        built: true
+        substrate_agent: opportunity-designer
+      - skill: prioritisation@0.1
+        capabilities: []
+        data_scope: [run_artifacts.A3b]
+        pattern: elicitation-dialogue
+        built: true
+        substrate_agent: opportunity-designer
+
+  - id: competitive-analysis
+    name: Competitive Analysis
+    owner: igor.tadic
+    area: discovery
+    modes: [discovery, free-roam]
+    capability_ceiling: [search, retrieve]
+    version: "0.1"
+    status: built            # PD140 granted the access; the bridge is built; run 2026-01 passed Q3
+    owns_workflow: competitive-analysis
+    built: true
+    # **This entry read `status: blocked` / `blocked_by: "outward research access"` until 23 August —
+    # eleven days after the block cleared.** PD140 answered the bank-policy question on 12 August,
+    # `market-content-extract` (the quarantine bridge the stale comment called owed) is built and
+    # registered, and stage 3 has produced accepted artifacts on run 2026-01 with Q3 passing. The two
+    # stale lines bracketed this agent's own `built: true`, above four bindings that every one of them
+    # marks built, so a reader deciding whether stage 3 could run had to pick a half — and nothing
+    # picked for them, because no script reads an agent's `status` or `blocked_by` at all.
+    #
+    # **What is still open is a limit rather than a block, and it is deliberately not restated here.**
+    # This comment said `egress.yaml` carries `approved_endpoint: null` and that the regime in force is
+    # `pilot-test`. **Both stopped being true on 30 August 2026** and the correction landed on 31 August:
+    # the endpoint is named, `current_regime` is `approved`, and real material is permitted. What that
+    # decision was is a default rather than a vetting, and the three narrowings it owes are written in
+    # `egress.yaml` where `C76` reads them. A second copy here would be the same unread declaration that
+    # already went stale twice.
+    bindings:
+      - { skill: landscape-mapping@0.1,     capabilities: [search, retrieve], pattern: research-loop,     built: true }
+      - { skill: market-content-extract@0.1, capabilities: [],          pattern: quarantined-extract, built: true }  # CF-06 — the bridge
+      - { skill: deep-dive@0.1,             capabilities: [search, retrieve], pattern: research-loop,     built: true }
+      - { skill: synthesis@0.1,             capabilities: [],           pattern: synthesis,           built: true }
+
+  - id: business-analyst
+    name: Business Analyst
+    owner: igor.tadic
+    area: discovery
+    modes: [discovery, free-roam]
+    capability_ceiling: [repo_write, jira_write]
+    version: "0.1"
+    status: partial          # stages 6 and 7 built; initiative-propagation parked on D11 (PD141)
+    bindings:
+      - skill: prd@0.1
+        capabilities: []
+        pattern: synthesis
+        built: true
+      - skill: initiative-authoring@0.1
+        capabilities: [repo_write]
+        data_scope: [run_artifacts.A13, know_how.initiative-template]
+        pattern: single-shot
+        built: true
+        substrate_agent: business-analyst
+        ported_from: "CS Analysis repository — template, instructions, checklist, validator"
+      - skill: initiative-propagation@0.1
+        capabilities: [jira_write]
+        pattern: best-effort-propagation    # CF-11 — was single-shot, which it did not satisfy
+        built: true
+        blocked_by: >
+          D11, the authoritative Jira host. Under deny-by-default egress this binding cannot declare an
+          allow list until the host is named, so it cannot run at all rather than merely failing.
+
+  - id: methodology-coach
+    name: Methodology Coach
+    owner: igor.tadic
+    area: discovery
+    modes: [discovery]            # owns no stage and passes no gate — it is already outside every workflow
+    capability_ceiling: []
+    version: "0.1"
+    status: active           # Method Canon landed 11 Aug 2026 at v0.1; the shell is a Coach
+    standalone: true                    # outside the workflow; no gate, no artifact
+    built: true
+    # One question is still returned unanswered, and it is recorded rather than treated as a block:
+    # the canon cannot say what ČS's Implementation Authority panel asks, because Metodika Iniciativy
+    # names it and points at a document the corpus does not carry (N4-a). That gate sits immediately
+    # past stage 7, so the Coach can say where an initiative goes and not what it will be asked.
+    bindings:
+      - { skill: methodology-guidance@0.1, capabilities: [], pattern: elicitation-dialogue, built: true }
+
+  - id: workflow-support
+    name: Workflow Support
+    owner: igor.tadic
+    area: discovery
+    modes: [discovery]            # owns no stage and passes no gate — it is already outside every workflow
+    capability_ceiling: []
+    version: "0.1"
+    status: active
+    standalone: true                    # outside the workflow; no gate, no artifact
+    built: true
+    # **It says what state a run is in and what will move it, and it can change nothing.** Approved by Igor
+    # on 13 September 2026 while the parked-stage deadlock was being traced by hand: stage 6 parked after a
+    # failed gate, a signature was discarded, and the producer spent seven file reads working out why. The
+    # answer was four sentences. **A producer with no exit reads the checker**, and this project has paid
+    # that twice.
+    #
+    # **The bound is mechanism rather than policy.** Stage one holds read and search only. Stage two would
+    # add `runTask` and never `editFiles`, because `editFiles` has no path scope in this build —
+    # `assurance.yaml` states it directly, the grant is a floor — so an agent that can edit one file can
+    # edit every file, and *it will only touch the run* would be instruction rather than enforcement. By
+    # this repository's own standard that is not a control.
+    bindings:
+      - { skill: workflow-support@0.1, capabilities: [], pattern: elicitation-dialogue, built: true }
+
+# ── The tool names a Copilot agent file may use ──────────────────────────────────
+#
+# **Every tool name in every Copilot wrapper was invented and none of them resolved, from 10 August to
+# 28 August 2026.** `read_file`, `create_file`, `replace_string_in_file` and `fetch_webpage` are not
+# names this substrate has. VS Code resolves a wrapper's `tools:` entry by `toolReferenceName`, and an
+# entry matching none is dropped in silence — so five agents ran with no tools at all while two
+# registries and one check agreed with each other that the grant was correct.
+#
+# **It was found by a person running the workflow, not by the build.** The Product Manager wrote no
+# artifact, told the tester to save the brief by hand, and emitted `{runs_root}` unresolved in the path
+# it offered. `C85` compares this file's `tools:` list against the wrapper carrying it, which is one
+# declaration against another, and both were wrong in the same way.
+#
+# **The catalogue below is the `toolReferenceName` of every tool the installed extension registers**,
+# read on 28 August 2026 from `contributes.languageModelTools` in
+# `/Applications/Visual Studio Code.app/Contents/Resources/app/extensions/copilot/package.json`,
+# VS Code 1.135.0 and Copilot Chat 0.63.0. It is dated for the same reason the model catalogue is: it
+# describes one version of one application and it goes stale on that application's clock.
+#
+# **Nothing checks a grant against it yet.** A wrapper naming a tool absent from this list would be
+# accepted today exactly as the four invented names were. Declared, not claimed.
+
+# **30 August 2026: the catalogue had one source and the substrate has three.** It was read from the
+# Copilot Chat extension alone, so every tool VS Code itself registers was missing from it — twenty of
+# them, `usages` among them, which sat in the `search` group below looking like an extension tool. **A
+# name absent from a catalogue a check validates against is a name that check would refuse**, and that is
+# the same failure as the four invented names one direction out. The groups now say where each set comes
+# from, because the three go stale on three different clocks: the extension on its own release, the core
+# tools on VS Code's, and an installed extension the day somebody uninstalls it.
+#
+# **`readProjectStructure` was removed and it is the interesting one.** The Copilot extension registers it
+# with no `toolReferenceName` at all, so it cannot be named in a wrapper's `tools:` list — it is not a
+# grantable name and listing it invited one. Nothing granted it.
+substrate_tools:
+  read: [readFile, listDirectory, viewImage, readNotebookCellOutput, getNotebookSummary]
+  write: [createFile, replaceString, multiReplaceString, insertEdit, applyPatch, createDirectory, editNotebook]
+  search: [codebase, symbols, fileSearch, textSearch, findTestFiles, changes, problems]
+  outward: [fetch, githubRepo, githubTextSearch]
+  delegate: [executionSubagent, searchSubagent, exploreSubagent, skill, switchAgent]
+  other: [vscodeAPI, runCommand, installExtension, newWorkspace, createJupyterNotebook, runNotebookCell, memory, resolveMemoryFileUri, sessionStoreSql]
+  umbrella: [editFiles]           # see below. It is not a tool the model calls; it is the switch for the four above
+  # Registered by VS Code itself rather than by any extension, read from the workbench bundle on 30 August
+  # 2026 and corrected on 31 August. `todo` is here and is the one an open decision concerns.
+  #
+  # **`runInTerminal` was missing from the first reading of this list, and it is the one that mattered.**
+  # The scan searched for `toolReferenceName:"<name>"` as a literal string; this tool assigns its name
+  # through a variable, so the search returned nothing and reported twenty tools where there are
+  # twenty-one. **That is `R7-48` applied to a person rather than to a check** — a selector that could not
+  # see the form the data actually took — written into the blueprint the same afternoon and not applied to
+  # the reading that produced this block.
+  #
+  # **What it cost was a premise.** *The agent holds no terminal on Copilot* was stated in the shared
+  # instructions, in the operator page's opening paragraph and in four handoffs, and the whole
+  # command-typing burden this build places on a person follows from it. It is not true. What is true is
+  # that no wrapper here grants it, which is a choice and is now recorded as one.
+  core: [artifactRules, artifacts, askQuestions, createAndRunTask, extensions, getTaskOutput, getTerminalOutput, killTerminal, new, rename, renderMermaidDiagram, reviewPlan, runInTerminal, runTask, runTests, sendToTerminal, terminalLastCommand, terminalSelection, testFailure, todo, usages]
+  # Installed separately and NOT present in a stock VS Code. **Stage 3 cannot research without this one**,
+  # and a checkout whose machine lacks the extension gets an agent whose grant silently drops it — which is
+  # exactly the failure mode the rest of this block exists to prevent, so it is named apart rather than
+  # mixed in with what ships.
+  installed: [websearch]
+  verified_on: "2026-08-30"
+  verified_from: >
+    three sources, all read on 30 August 2026: contributes.languageModelTools in Copilot Chat 0.63.0;
+    the toolReferenceName registrations in VS Code 1.135.0's own workbench bundle; and
+    contributes.languageModelTools in ms-vscode.vscode-websearchforcopilot 0.1.4, which is installed
+    rather than shipped and whose absence is a supported state of the machine
+
+# **`editFiles` is a switch and not a tool, and reading its own description the other way cost a session.**
+# Its model-facing description reads "This is a placeholder tool, do not use", which is addressed to the
+# model so that the model never calls it. **In an agent file it is the master switch for editing.** The
+# extension turns `apply_patch`, `insert_edit_into_file`, `replace_string_in_file` and
+# `multi_replace_string_in_file` off together the moment `copilot_editFiles` appears in an agent's tool
+# selection with the value false, **and an unlisted tool is exactly that**. So a wrapper naming
+# `replaceString` and not naming `editFiles` gets no edit tool at all, which is the state the four
+# producing agents were in on 29 August: they could create a file and could not repair one. A producer that
+# writes an incomplete record and cannot fix it strands the run, and one did.
+#
+# **So the grant names `editFiles` and not the individual edit tools.** `replaceString` and `insertEdit`
+# carry no `userDescription` in the extension and are not selectable by name in any case; naming the switch
+# is both the thing that works and the thing that says what is meant.
+#
+# **Material Intake is deliberately not granted it.** Editing is not among the four things the quarantine
+# denies, so this is a judgement rather than a rule: its stage is a single reduction over material still on
+# disk, so a bad write is repaired by re-running it, and withholding the ability to rewrite files that
+# already exist is worth keeping on the one agent that handles content nobody in this project wrote.
+#
+# **The search half of stage 3's reach is not in a stock VS Code, and that was the blocking defect.**
+# `landscape-mapping` and `deep-dive` need to discover a page as well as retrieve one. Copilot Chat ships
+# `fetch`, which retrieves an address already known, and no web search of any kind — so both bindings were
+# unrunnable on the surface this ships to, and stopping was their correct behaviour. **Closed on 30 August
+# 2026 by installing `ms-vscode.vscode-websearchforcopilot`**, which grants `websearch` and appears in the
+# `installed` group of the catalogue rather than among what ships. A machine without it holds `fetch`
+# alone, which is a supported state: the skills then run on supplied addresses and record what they could
+# not reach.
+#
+# **No tool reads a Word, PDF, PowerPoint or Excel file**, and that is still true of the tools. `readFile`
+# is text and `viewImage` is an image, which is the whole of what an agent here can open directly.
+#
+# **What changed on 31 August 2026 is that it stopped mattering for three of the four.** This block used to
+# end "material in any other form is converted by a person before the workflow sees it", which put a manual
+# step in front of the one stage whose whole subject is material somebody else produced. The three Office
+# forms are zip archives of XML, Node opens both with nothing installed, and `convert.mjs` writes the text
+# beside the original for `readFile` to open. The agent triggers that command; it does not gain a tool.
+#
+# **PDF is declared out rather than half-supported.** It carries no document order a zip reader can
+# recover, so a run that is handed one asks for the text another way and says so.
+
+# ── Substrate mapping ────────────────────────────────────────────────────────────
+# GitHub Copilot declares tools PER AGENT, not per binding. A binding whose
+# capability set differs from its siblings' therefore needs its own agent file. This is the design being
+# ENFORCED rather than described — not a design change.
+#
+# Where every binding of a design agent shares one capability set, one agent file covers them all.
+
+substrate_mapping:
+  - agent_file: .github/agents/workflow-support.agent.md
+    design_agent: workflow-support
+    covers: [workflow-support]
+    tools: ['readFile', 'listDirectory']
+    purpose: >
+      Says what state a run is actually in and what will move it. Reads the run record, the gate result and the
+      failing task's output, and answers with the act and the one task that takes it, or says plainly that nothing
+      here fixes it. Owns no stage and passes no gate.
+    triggers: [what state is this run in, why did that task fail, what moves this stage, I cannot find a route, the task failed and did not say why]
+    reason: >
+      Read and search, and nothing else. **The bound is mechanism rather than policy**: `editFiles` has no
+      path scope in this build, so an agent that can edit one file can edit every file, and an instruction
+      saying it will only touch the run would not be a control by this repository's own standard. It fires
+      nothing either — a repair is a script people wrote and reviewed, and an agent's judgement extends to
+      which named repair matches a state and never to composing one.
+
+  - agent_file: .github/agents/product-manager.agent.md
+    design_agent: product-manager
+    covers: [brief-creation, ideation, mvp-option-design, mvp-expansion]
+    tools: ['readFile', 'listDirectory', 'createFile', 'editFiles', 'runTask', 'getTaskOutput']
+    purpose: >
+      Elicits an initiative brief through conversation, in the run the person started and named, and marks what
+      the user could not supply. Never infers a field. At stage 4 it writes the solution set a person chooses one
+      solution from, and at stage 5 it designs the MVP options for that solution and expands the option a person
+      chooses.
+    triggers: [start a discovery run, new initiative, initiative brief, begin discovery, what are we exploring]
+    reason: >
+      All seven bindings share the empty capability set, so they live in one file. This line read "all
+      five bindings share capabilities []; the four unbuilt ones will live here" until 31 August 2026,
+      against a roster that has carried seven built bindings since 13 August.
+
+      **`runTask` and `getTaskOutput` were added on 31 August 2026, to this agent alone, to answer U1.**
+      The redesign gives every mechanical move to the System and makes the Agent the thing that triggers
+      it, and no agent in this build has ever held the tool that does the triggering. `runTask` runs only
+      what `.vscode/tasks.json` declares, so the grant is those fourteen commands and nothing wider.
+      `getTaskOutput` is here so that an agent which runs a task and cannot report its result can be told
+      apart from one that never ran it.
+
+      **The probe answered and the other three producers followed.** This line said they were deliberately
+      not granted it until 9 September 2026, by which point all four had held it through two complete live
+      runs. `runTask` resolves; the Methodology Coach is the only agent without it, because it owns no stage
+      and triggers nothing.
+
+      **`listDirectory` was added to all five on 9 September 2026.** It sits in this substrate's own `read`
+      group beside `readFile` and no wrapper had ever named it, which cost three incidents in one day: a
+      stage guessing a path and reading a stale example, a stage abandoning the same search, and a task
+      existing solely so an agent could see what was in a folder. **Listing is reading**, which is the
+      capability these agents have rather than one they are denied; the quarantine split is about
+      `fileSearch` and `codebase`, which search across the repository rather than showing one named folder.
+
+  - agent_file: .github/agents/opportunity-designer.agent.md
+    design_agent: hypothesis-designer
+    covers: [material-intake, hypothesis-authoring, opportunity-framing, prioritisation]
+    tools: ['readFile', 'listDirectory', 'createFile', 'editFiles', 'runTask', 'getTaskOutput']
+    purpose: >
+      Reduces the raw problem material to observations during intake, then turns those observations into
+      standardized problem hypotheses with derived trust tags and prioritises them with the Researcher. After intake
+      it works from the intake record alone, and it never sources evidence from outside the material.
+    triggers: [problem hypotheses, trust tag, prioritise problems, primary problems, stage 2]
+    reason: >
+      One agent runs stage 2, so intake's narrower capability list shares this agent's host unit.
+      `material-intake` is a binding of this agent, and the User picks once for the whole stage.
+
+      **The grant this file carries is wider than the one intake used to run under, and that is the
+      change.** The skill keeps its empty capability list in `skills.yaml` and its `quarantined-extract`
+      pattern, and the boundary now rests on the task bound rather than on a host unit with nothing in it.
+      Recorded on the binding below, where §4.3 puts everything that governs what work may reach.
+
+  - agent_file: .github/agents/business-analyst.agent.md
+    design_agent: business-analyst
+    covers: [prd, initiative-authoring, initiative-propagation]
+    tools: ['readFile', 'listDirectory', 'createFile', 'editFiles', 'runTask', 'getTaskOutput']
+    purpose: >
+      Writes the PRD draft from the expanded pilot at stage 6, which a person marks agreed, and at stage 7 authors a
+      delivery-ready initiative document in the language the run declared, from the agreed PRD, following the ČS
+      initiative template. Verifies the PRD agreement block before starting and never invents a Jira identifier.
+    triggers: [author initiative, create initiative, iniciativa, delivery-ready initiative, stage 7]
+    reason: >
+      repo_write only. `prd` shares this capability set and will live here when built.
+      `initiative-propagation` declares jira_write, a different set, so it needs its own file — and is
+      blocked on D11 regardless.
+
+  # Both of these were built on 10 August and were never recorded here. **C85 found them on its first
+  # run**, which is the defect that check exists for: a wrapper on disk that the registry cannot see is an
+  # agent whose capability grant nobody governs.
+  - agent_file: .github/agents/competitive-analysis.agent.md
+    design_agent: competitive-analysis
+    covers: [landscape-mapping, market-content-extract, deep-dive, synthesis]
+    tools: ['readFile', 'listDirectory', 'createFile', 'editFiles', 'fetch', 'websearch', 'runTask', 'getTaskOutput']
+    purpose: >
+      Researches the market for a discovery run: maps the landscape, profiles participants into competitor cards,
+      and distils a synthesis against the run's problems.
+    triggers: [map the landscape, competitors, deep dive, competitive synthesis, stage 3, who is in this market]
+    reason: >
+      The only agent that reaches outward. `fetch` is the whole of that reach and it is bounded by
+      the deny-by-default allow list in egress.yaml rather than by this grant. **These four bindings do not
+      share one capability set:** landscape-mapping and deep-dive declare [search, retrieve], the bridge and
+      synthesis declare [], so by the rule stated above they owe two host units and hold one. This line said
+      they shared one set until 23 August 2026, and a false reason costs more than a declared gap — it read
+      as the rule already being satisfied, so nobody looked, while `market-content-extract`, whose empty list
+      is the whole of its guarantee, ran inside a file granted fetch and write. That is the combined step
+      Blueprint §6.2 forbids and the shape material-intake was split out to prevent. The gap is declared
+      under R4.3-8 in specifications/definitions/area.md; the split itself needs its own wrapper file and
+      C85's split set to admit it, so it is owed rather than done here.
+
+  - agent_file: .github/agents/methodology-coach.agent.md
+    design_agent: methodology-coach
+    covers: [methodology-guidance]
+    tools: ['readFile', 'listDirectory']
+    purpose: >
+      Teaches the discovery method: the opportunity solution tree, what each stage is for, why the workflow is shaped
+      as it is. Owns no stage and passes no gate; a run completes without ever calling it.
+    triggers: [coach, methodology, how does this stage work, opportunity solution tree, teach the method, why no experiments]
+    reason: >
+      Read and nothing else. It owns no stage, passes no gate and writes no artifact, so a write capability
+      would be a grant with no use — and the widest read scope in the workflow paired with the narrowest
+      write is the shape that makes the role safe.
+
+  # **`material-intake` has no entry here, because one agent runs stage 2 and intake's narrower capability
+  # list shares that agent's host unit.** An entry of its own carried a grant of
+  # reading a file and writing one and nothing else, split from its design agent so the narrow grant was a
+  # separate host unit rather than a paragraph asking a wider one to behave. **That is over.** The skill
+  # runs under the Opportunity Designer, which is the design agent the registry has always given it, and
+  # one agent now reads material a customer wrote and also triggers tasks.
+  #
+  # **What bounds it instead**, stated rather than described as something it is not: `runTask` runs only
+  # what `.vscode/tasks.json` declares and cannot compose a command or take an argument from the material,
+  # and the task that records an acceptance requires a person to type a name — so nothing inside the
+  # material can produce a recorded decision. `C155` holds the task bound; `C85`'s quarantine clause holds
+  # the skill's empty capability list and refuses a wrapper that would put it back on the agent picker.
+  # **This is weaker than an agent with no tools, and the weakening is the decision, not an oversight.**
+

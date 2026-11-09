@@ -1,0 +1,159 @@
+{
+  // ── Copilot's trace settings are not set here, because VS Code does not read them here ────────────────
+  //
+  // Every `github.copilot.chat.otel.*` setting is application-scoped (Copilot Chat 0.67.0, VS Code 1.139.1), so VS Code
+  // takes it only from a person's user settings. The pilot team switches capture on in its own user settings, with the
+  // `file` exporter writing `.copilot-traces/otel.jsonl`, for its own measurement.
+  //
+  // A capture holds tool names, file paths, models, token counts and the repository's address, branch and commit. The
+  // captures of September 2026 (Copilot Chat 0.66.0) hold no prompt text, system instructions, messages or tool
+  // definitions. The folder is still gitignored and never leaves the machine: its file paths name the run, and a later
+  // version, a vendor fix to microsoft/vscode#326254 or an enterprise policy can change what is captured.
+  // `node .github/scripts/trace.mjs --in .copilot-traces/otel.jsonl --run fixtures/<id> --write` reduces it before
+  // anything is retained.
+  //
+  // An enterprise-managed `telemetry` block overrides a person's user settings. If ČS has one set, it decides whether
+  // anything is captured.
+
+  // Reads agents from `.github/agents` and from no other agent folder in this one. Agent folders outside this
+  // folder, a developer's own ~/.copilot/agents and another agent tool's home agents folder, are beyond what a
+  // project setting reaches.
+  "chat.agentFilesLocations": {
+    ".github/agents": true,
+    ".claude/agents": false
+  },
+
+  "chat.useClaudeMdFile": false,
+
+  // There is no `AGENTS.md` here, so this changes nothing today and pins the behaviour for the day
+  // somebody adds one. A third file claiming to be the entry point is the drift these two lines exist
+  // to prevent.
+  "chat.useAgentsMdFile": false,
+
+  // **A stage of this workflow does not fit in twenty-five requests, and the default is twenty-five.**
+  // On 2 September 2026 the first live run met "Continue to iterate?" several times in stage 3 alone —
+  // once mid-research, once mid-card, once while the agent was working out why a join had not happened.
+  // The prompt carries no information: it is not a checkpoint anybody designed, nothing about the run is
+  // decided at it, and a person who clicks Continue every time has been interrupted for nothing. **A
+  // decision point in this workflow is a gate with a name and a person's signature on it**, and this is
+  // not one.
+  //
+  // Two hundred rather than unbounded, because a runaway agent should still stop eventually and stage 3
+  // at full scope reached roughly sixty of these. Raised by Igor on the first run that hit it.
+  "chat.agent.maxRequests": 200,
+
+  // An agent's edit is kept three seconds after its turn ends, where VS Code would hold it for Keep or Undo, and Undo reverts the agent's work.
+  "chat.editing.autoAcceptDelay": 3,
+
+  // **The step guards run as agent hooks** (H3), from `.github/hooks/step-guards.json`, one command at four moments.
+  // At a chat's start `.github/scripts/step-guard.mjs` hands the agent the tools each agent holds and the run's
+  // language. Before an agent's tool call it refuses a person's task, a document written before its skill is opened,
+  // a fourth unchanged task run, a write outside the stage in flight, and a search or fetch before stage 3's opening.
+  // After a task it hands the agent the whole task output. At the end of a turn it sends the agent back once where its
+  // last message sends the person to record while the stage owes a document, or its review ask leaves out a line the
+  // person reads word for word. The setting is on by default and in preview, and a default is not a control. A
+  // company policy (`ChatHooks`, `chat.hooks.allowManagedOnly`) still wins over it; the gate checks C189 and C190 are
+  // the floor where it does.
+  "chat.useHooks": true,
+
+  // ── An agent file's tool list is a floor, not a ceiling, and these seven lines are the ceiling ──────
+  //
+  // Found on 29 August 2026, in the second Copilot session ever driven here. The Product Manager reported
+  // holding `session_store_sql` alongside the two tools its wrapper grants. **Fifteen of the extension's
+  // tools are gated on a setting or a context key rather than on the agent's `tools:` list**, read from
+  // `contributes.languageModelTools` in the installed extension; some carry `canBeReferencedInPrompt:
+  // false` and can never appear in a grant at all. So a wrapper's list says what an agent is given and
+  // says nothing about what else arrives.
+  //
+  // **This matters for one agent above the rest.** `material-intake` is the quarantine boundary and its
+  // whole guarantee is that it holds nothing beyond reading a file and writing one. A subagent tool
+  // reaching it is delegation around its own limits, which is the shape the split exists to prevent.
+  //
+  // Six are pinned to the value that withholds the tool. Five of the six are already the extension's
+  // default and are pinned anyway, because a default is not a control: it is one version's opinion and
+  // nothing here would notice it changing.
+  "github.copilot.chat.executionSubagent.enabled": false,
+  "github.copilot.chat.searchSubagent.enabled": false,
+  "github.copilot.chat.skillTool.enabled": false,
+  "github.copilot.chat.switchAgent.enabled": false,
+  "github.copilot.chat.getChangedFilesTool.enabled": false,
+
+  // `newWorkspaceCreation` is the one that defaults to ON. Nothing in this build grants an agent the
+  // creation of a workspace, so it is withheld.
+  "github.copilot.chat.newWorkspaceCreation.enabled": false,
+
+  // **The inversion, and it is stated because it reads wrong.** `copilot_installExtension` is registered
+  // when this setting is FALSE: its own gate is `!config.github.copilot.chat.installExtensionSkill.enabled`.
+  // Setting it true withholds the tool, and the skill path it would otherwise route through is withheld by
+  // `skillTool.enabled` above. **Read off the gate rather than observed in behaviour**, and said here so a
+  // reader who thinks this line enables something can check the claim.
+  "github.copilot.chat.installExtensionSkill.enabled": true,
+
+  // ── The editor was rewriting run artifacts on save, and nothing in this build could see it ──────────
+  //
+  // Found on 8 September 2026, twice in one run, in two different stages. A producer wrote
+  // `supported_by: [a, b]` on one line; the file was saved; Prettier wrapped the bracket onto the next
+  // line because the line crossed its default width of 80; and **this build's front-matter reader refuses
+  // a flow sequence on a continuation line**, so the artifact stopped parsing and every gate result for
+  // the run was suppressed. `artifact-fields.yaml` states that refusal in its own words.
+  //
+  // **The producer diagnosed it correctly both times and could not fix it.** It repaired the file, saved
+  // it, and the same formatter was waiting. Its own account the second time: *"the earlier parse failure
+  // was a reformatting artifact that had split several bracketed lists across lines, which this
+  // repository's YAML reader refuses."*
+  //
+  // **This is not a Copilot setting, and it is the one line in this file every clone needs.** The cause
+  // was a machine-level `editor.formatOnSave` with no markdown exclusion anywhere. The defence belongs in
+  // the repository: a run artifact is a generated document with a strict reader and no business being
+  // reflowed by a general-purpose formatter. A `.prettierignore` over the runs root would be the belt to
+  // this brace, for anyone formatting from a terminal rather than on save.
+  //
+  // **Window-scoped, unlike the tracing keys above**, so a workspace file can set it and it takes effect
+  // without a reload.
+  "[markdown]": { "editor.formatOnSave": false }
+
+  // **Three tools cannot be withheld by anything this repository can set**, and they are declared rather
+  // than quietly left out. `copilot_sessionStoreSql`, which queries Copilot session history with SQL, is
+  // gated on a context key and carries `canBeReferencedInPrompt: false`. `copilot_findTestFiles` carries
+  // the same flag and no gate at all. `copilot_githubRepo` is withheld only by enabling the GitHub MCP
+  // server, which is a larger grant than the one it removes. They reach every agent here, including the
+  // one that runs the quarantine step.
+  //
+  // **`viewImage` is deliberately left on.** Reading an image somebody handed the agent is reading, which
+  // is the capability the quarantine has rather than one it is denied.
+  //
+  // **`disableReplaceTool` is deliberately left unset.** Setting it would withhold `replaceString`, which
+  // five wrappers are granted and need to write an artifact at all.
+
+  // ── Stage 3's outward reach comes from an extension, and this file deliberately sets none of it ─────
+  //
+  // **Copilot Chat ships no web search.** Read from `contributes.languageModelTools` in Copilot Chat
+  // 0.63.0 on 30 August 2026: 38 tools, of which the only outward ones are `fetch`, which retrieves an
+  // address already known, and two that search GitHub repositories for source code. VS Code's own 20
+  // core tools add none either. So both stage-3 bindings were unrunnable on this surface for eighteen
+  // days while their pages told the producer to reach with a name nothing registers.
+  //
+  // **`ms-vscode.vscode-websearchforcopilot` is what closes it**, published by Microsoft, installed
+  // separately rather than shipped. It registers `websearch` with no `when` clause, so once installed it
+  // reaches every agent whose grant names it, and `agents.yaml` carries it in an `installed` group apart
+  // from what ships. **A machine without the extension is a supported state**: the grant silently drops
+  // the name, the binding holds retrieval alone, and the skills then run on addresses the person supplies
+  // and record what they could not reach.
+  //
+  // **Two things are deliberately NOT set here.** `websearch.preferredEngine` chooses between Tavily and
+  // Bing and is an open decision, not ours to pin — it decides which third party a query reaches, and
+  // pinning a vendor in a project file is how a default becomes a decision nobody took. And the API key
+  // is not here and must never be: the extension prompts on first use and stores it in VS Code's secret
+  // storage. **A key in a repository file is a key in every clone of it.**
+  //
+  // **The extension does not answer the permission question.** Queries leave to Tavily or to Microsoft
+  // under a key. **This comment said `approved_endpoint` in `egress.yaml` is still null and that `C76`
+  // refuses any artifact claiming `approved`.** The endpoint was named on 30 August 2026, the regime in
+  // force is `approved` and real material is permitted; what the extension still needs is the key, which
+  // is a state of the machine rather than of this repository.
+
+  // **And a managed Copilot policy overrides everything in this file**, the same way a managed `telemetry`
+  // block overrides a person's trace settings. Whether ČS operates one is unknown and is on the ask that goes
+  // with COPILOT-TRACING-REQUEST.md. If it does, `C121` still passes here and the protection is not real
+  // in that environment, which is why the finding is written up rather than closed by this file.
+}

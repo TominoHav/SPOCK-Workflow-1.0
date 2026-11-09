@@ -1,0 +1,404 @@
+# The screening-input join: each canonical input a regulatory screen asks for, and the rows of the four area cards it covers.
+# Read by screening-inputs.mjs, check.mjs and derive.mjs.
+# Edited by hand when an area card's rows change.
+# Checked by C123, which fails when a row named here is not in its area card.
+
+version: "0.1"
+owner: ceska-sporitelna
+written_by: igor.tadic
+date: "2026-08-27"
+
+# ── the groups the elicitation asks in ───────────────────────────────────────────────
+#
+# A group is an ask, not a schema. `personal-data` opens on one gating question and the rest of it is
+# skipped where the answer is no, which is the requirement's own observation that whether personal data
+# is processed gates most of GDPR's twelve sub-domains.
+
+groups:
+  - id: what-it-is
+    name: What this is
+    ask: "What is being built or changed, what kind of product it is, and who it is for"
+  - id: how-it-reaches
+    name: How it reaches the client
+    ask: "How a client finds it, buys it, and uses it, and through what surfaces"
+  - id: money-and-advice
+    name: Money and advice
+    ask: "What the client pays, whether anything is recommended to them, and what is claimed"
+  - id: personal-data
+    name: Personal data
+    ask: "Whether personal data is involved at all, and if so whose, what, why and on what basis"
+    gated_by: personal_data_processed
+  - id: agreement-and-paperwork
+    name: Agreement and paperwork
+    ask: "How the client agrees, what documents change, and how they get out"
+  - id: who-else-and-what-breaks
+    name: Who else, and what could go wrong
+    ask: "Who outside the bank is involved, how complaints run, and what the security exposure is"
+  - id: build-shape
+    name: The shape of the build
+    ask: "Nothing at framing. Every input in this group belongs to the moment options exist"
+
+# ── the canonical inputs ─────────────────────────────────────────────────────────────
+
+inputs:
+  # what-it-is
+  - id: product_description
+    name: Product or service description
+    asked_as: "What is being built or changed, in a sentence a person outside the team would follow"
+    group: what-it-is
+    knowable_at: M1
+    sources: [C-I1]
+
+  - id: product_type
+    name: Product type
+    asked_as: "Is this an investment, insurance, payment, credit or other kind of product, or none of those"
+    group: what-it-is
+    knowable_at: M1
+    sources: [C-I3, L-I2]
+    note: "Gates five of the Compliance area's thirteen sub-domains and four of those five open a separate approval track. The single highest-value input in the set."
+
+  - id: bank_role
+    name: Bank role
+    asked_as: "What the bank is here — manufacturer, distributor, intermediary, or something else"
+    group: what-it-is
+    knowable_at: M1
+    sources: [C-I2, L-I1, S-I3]
+
+  - id: target_users
+    name: Target users
+    asked_as: "Who uses this — consumers, businesses, staff, or a mix"
+    group: what-it-is
+    knowable_at: M1
+    sources: [C-I4, L-I3]
+
+  - id: target_market
+    name: Target market
+    asked_as: "The market segment it is designed for, and anyone it is expressly not for"
+    group: what-it-is
+    knowable_at: M1
+    sources: [C-I5]
+
+  # how-it-reaches
+  - id: distribution_model
+    name: Distribution model
+    asked_as: "How it is sold or made available, and by whom"
+    group: how-it-reaches
+    knowable_at: M1
+    sources: [C-I6]
+
+  - id: channels
+    name: Channels
+    asked_as: "Which channels it runs through — branch, app, web, phone, partner"
+    group: how-it-reaches
+    knowable_at: M1
+    sources: [C-I7, L-I4]
+
+  - id: client_journey
+    name: Client journey
+    asked_as: "What the client actually does, from first hearing about it to using it"
+    group: how-it-reaches
+    knowable_at: M1
+    sources: [C-I8, L-I5, S-I7]
+
+  - id: digital_interfaces
+    name: Digital interfaces, documents and authentication
+    asked_as: "Which screens, documents and sign-in steps a client meets"
+    group: how-it-reaches
+    knowable_at: M1
+    sources: [C-I17, S-I6]
+
+  - id: client_communication
+    name: Client-facing communication
+    asked_as: "What the bank tells the client about this, and where"
+    group: how-it-reaches
+    knowable_at: M1
+    sources: [C-I10, L-I9]
+
+  # money-and-advice
+  - id: pricing_and_fees
+    name: Pricing and fees
+    asked_as: "What the client pays, and what anyone is paid for selling it"
+    group: money-and-advice
+    knowable_at: M1
+    sources: [C-I9]
+
+  - id: advice_involvement
+    name: Advice or recommendation involvement
+    asked_as: "Does anything here recommend, advise or steer a client toward a choice"
+    group: money-and-advice
+    knowable_at: M1
+    sources: [C-I11]
+
+  - id: suitability_implications
+    name: Suitability implications
+    asked_as: "Does the bank have to establish that this is right for a particular client"
+    group: money-and-advice
+    knowable_at: M1
+    sources: [C-I12]
+
+  - id: sustainability_claims
+    name: Sustainability claims
+    asked_as: "Is anything claimed about sustainability, ESG or environmental impact"
+    group: money-and-advice
+    knowable_at: M1
+    sources: [C-I14]
+
+  # personal-data
+  - id: personal_data_processed
+    name: Whether personal data is processed
+    asked_as: "Is any personal data involved at all"
+    group: personal-data
+    knowable_at: M1
+    sources: [G-I1]
+    note: "The gating question of its group. Where the answer is no, the rest of the group resolves rather than being asked, and the resolution is recorded."
+
+  - id: data_subject_categories
+    name: Categories of data subjects
+    asked_as: "Whose data — clients, prospects, staff, people who are not clients"
+    group: personal-data
+    knowable_at: M1
+    sources: [G-I2]
+
+  - id: personal_data_categories
+    name: Categories of personal data
+    asked_as: "What kinds of data — identity, contact, transaction, behavioural, device"
+    group: personal-data
+    knowable_at: M1
+    sources: [G-I3]
+
+  - id: special_category_data
+    name: Whether special-category data is present
+    asked_as: "Anything about health, biometrics, beliefs or other special categories"
+    group: personal-data
+    knowable_at: M1
+    sources: [G-I4]
+
+  - id: processing_purposes
+    name: Purposes
+    asked_as: "What the data is used for, purpose by purpose"
+    group: personal-data
+    knowable_at: M1
+    sources: [G-I5]
+
+  - id: lawful_basis
+    name: Lawful basis per purpose
+    asked_as: "On what basis each of those purposes runs"
+    group: personal-data
+    knowable_at: M1
+    sources: [G-I6]
+
+  - id: data_source
+    name: Source of the data
+    asked_as: "Where the data comes from — the client, the bank's own records, someone else"
+    group: personal-data
+    knowable_at: M1
+    sources: [G-I7]
+
+  - id: data_recipients
+    name: Recipients
+    asked_as: "Who sees the data outside the team that collected it"
+    group: personal-data
+    knowable_at: M1
+    sources: [G-I8]
+
+  - id: profiling_or_automated_decisions
+    name: Whether profiling or automated decisions occur, and their effect
+    asked_as: "Does anything score, rank, profile or decide about a client without a person"
+    group: personal-data
+    knowable_at: M1
+    sources: [G-I12]
+    note: "Also fires the Compliance card's AI escalation trigger. AI is out of scope as an area and routed rather than screened."
+
+  - id: marketing_and_tracking
+    name: Marketing and tracking intent
+    asked_as: "Is anything here used for marketing, or does it track a client's device"
+    group: personal-data
+    knowable_at: M1
+    sources: [G-I13]
+
+  - id: dpia_status
+    name: Whether a data protection impact assessment exists or is required
+    asked_as: "Has a data protection impact assessment been done, or is one expected"
+    group: personal-data
+    knowable_at: M1
+    sources: [G-I15]
+
+  - id: rights_route
+    name: The client's route to exercise their rights
+    asked_as: "How a client asks for their data, corrects it, or objects"
+    group: personal-data
+    knowable_at: M1
+    sources: [G-I16]
+
+  # agreement-and-paperwork
+  - id: agreement_capture
+    name: How agreement is captured
+    asked_as: "How the client agrees — signature, click, in branch, over the phone"
+    group: agreement-and-paperwork
+    knowable_at: M1
+    sources: [L-I6]
+
+  - id: contract_terms_affected
+    name: Contract terms affected
+    asked_as: "Which existing contract terms change, if any"
+    group: agreement-and-paperwork
+    knowable_at: M1
+    sources: [L-I7]
+
+  - id: precontractual_documents
+    name: Pre-contractual documents affected
+    asked_as: "Which documents a client gets before they commit, and whether any change"
+    group: agreement-and-paperwork
+    knowable_at: M1
+    sources: [L-I8]
+
+  - id: withdrawal_and_termination
+    name: Withdrawal and termination behaviour
+    asked_as: "How a client backs out or closes it, and on what terms"
+    group: agreement-and-paperwork
+    knowable_at: M1
+    sources: [L-I10]
+
+  - id: countries_offered
+    name: Countries the product is offered in
+    asked_as: "Which countries this is offered in"
+    group: agreement-and-paperwork
+    knowable_at: M1
+    sources: [L-I14]
+
+  # who-else-and-what-breaks
+  - id: third_parties
+    name: Third parties and what they supply
+    asked_as: "Who outside the bank is involved, and what each of them provides"
+    group: who-else-and-what-breaks
+    knowable_at: M1
+    sources: [C-I13, L-I11, S-I4]
+
+  - id: complaints_and_disputes
+    name: Complaints, disputes and monitoring assumptions
+    asked_as: "How a client complains, where a dispute goes, and what anyone assumes is monitored"
+    group: who-else-and-what-breaks
+    knowable_at: M1
+    sources: [C-I16, L-I13]
+
+  - id: fraud_exposure
+    name: Fraud exposure
+    asked_as: "What could be abused here, and by whom"
+    group: who-else-and-what-breaks
+    knowable_at: M1
+    sources: [S-I13]
+
+  - id: registered_under_cyber_regime
+    name: Whether the affected service is registered under the cyber regime
+    asked_as: "Is the service one the bank has registered under the cybersecurity rules"
+    group: who-else-and-what-breaks
+    knowable_at: M1
+    sources: [S-I14]
+
+  # build-shape — M2, and none of it is asked at framing
+  - id: systems_affected
+    name: Systems affected
+    asked_as: "Which systems this touches"
+    group: build-shape
+    knowable_at: M2
+    sources: [S-I1]
+
+  - id: critical_or_important_function
+    name: Whether the systems support a critical or important function
+    asked_as: "Do any of those systems support a critical or important function"
+    group: build-shape
+    knowable_at: M2
+    sources: [S-I2]
+
+  - id: hosting_and_data_location
+    name: Hosting, data location and transfers
+    asked_as: "Where it runs, where the data sits, and whether anything leaves the country"
+    group: build-shape
+    knowable_at: M2
+    sources: [G-I10, S-I5]
+
+  - id: processors_and_subprocessors
+    name: Processors and sub-processors
+    asked_as: "Who processes data on the bank's behalf, and who they use"
+    group: build-shape
+    knowable_at: M2
+    sources: [G-I9]
+
+  - id: retention_periods
+    name: Retention periods
+    asked_as: "How long each kind of data is kept"
+    group: build-shape
+    knowable_at: M2
+    sources: [G-I11]
+
+  - id: security_measures
+    name: Security measures
+    asked_as: "What protects it"
+    group: build-shape
+    knowable_at: M2
+    sources: [G-I14]
+
+  - id: data_at_rest_and_in_transit
+    name: Data at rest and in transit
+    asked_as: "How data is protected while stored and while moving"
+    group: build-shape
+    knowable_at: M2
+    sources: [S-I9]
+
+  - id: components_and_libraries
+    name: Components and libraries used
+    asked_as: "What it is built out of"
+    group: build-shape
+    knowable_at: M2
+    sources: [S-I8]
+
+  - id: release_and_environment
+    name: Release and environment approach
+    asked_as: "How it is released and what environments it runs in"
+    group: build-shape
+    knowable_at: M2
+    sources: [S-I10]
+
+  - id: recovery_expectations
+    name: Recovery expectations
+    asked_as: "What has to keep working, and how fast it has to come back"
+    group: build-shape
+    knowable_at: M2
+    sources: [S-I11]
+
+  - id: controls_and_monitoring
+    name: Controls, reporting and monitoring
+    asked_as: "What controls, reports and alerts exist around it"
+    group: build-shape
+    knowable_at: M2
+    sources: [C-I15, S-I12]
+
+  - id: content_brand_and_software
+    name: Content, brand and software used
+    asked_as: "Whose content, brand or software this uses"
+    group: build-shape
+    knowable_at: M2
+    sources: [L-I12]
+
+# ── the cards this joins, and where each one's §4 lives ──────────────────────────────
+#
+# The prefix is what a `sources` entry is parsed against. A card added later declares its own prefix here
+# and its rows become claimable; until every row is claimed by exactly one canonical input, C123 fails.
+
+cards:
+  - area: A1
+    prefix: C-I
+    body: compliance/area-compliance.md
+    count: 17
+  - area: A2
+    prefix: G-I
+    body: compliance/area-gdpr.md
+    count: 16
+  - area: A3
+    prefix: L-I
+    body: compliance/area-legal.md
+    count: 14
+  - area: A4
+    prefix: S-I
+    body: compliance/area-ict-security.md
+    count: 14

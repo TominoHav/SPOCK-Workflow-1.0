@@ -1,0 +1,98 @@
+.DS_Store
+node_modules/
+*.log
+
+# Runs are working artifacts. The worked example is committed deliberately (see fixtures/README.md);
+# real runs are not, because they carry initiative content that is not ours to version here.
+fixtures/*
+!fixtures/README.md
+# The worked example the whole build is checked against — fabricated material, committed deliberately.
+!fixtures/2026-01-mortgage-onboarding/
+# the first agent-produced run, stages 1-2 only — evidence. It FAILS C143 from
+# 2026-08-29 and is kept failing on purpose: its stage 2 was accepted over a stage 1 that was never
+# gated, which is that run's real history. Repairing it means writing a G1 nobody stood at.
+!fixtures/2026-02-sme-onboarding/
+# T11 — the first run agent-driven end to end, with its agent log. Evidence, committed deliberately.
+!fixtures/2026-03-investor-onboarding/
+# The first quality-gate rejection this repository has ever recorded, and the first run to exercise
+# Evidence Standards §5.3 in both directions. Fabricated material, so the reason above does not apply.
+!fixtures/2026-04-card-disputes/
+
+# The first run produced end to end in the record-and-output shape (§6.0), on a banking subject nobody
+# here had used before. Fabricated material, committed deliberately as evidence.
+!fixtures/2026-05-corporate-coverage/
+
+# The dry run (PT-049). The first run driven from the written procedures alone, with no help from a
+# session that already knew the shape, and the first to record a refinement round at a decision gate.
+# Fabricated material, committed deliberately as evidence.
+!fixtures/2026-06-instant-payment-disputes/
+
+# The seventh run, and the first driven over a repaired estate. Sixty-five audit findings were fixed on
+# 23 August, twenty-six of them checks that did not decide what they claimed to, and this run is what says
+# whether the workflow still runs after all of it. It is also the first run to declare Competitive Analysis
+# Standards v0.13, so the confidence band that no card could reach the top of since 18 August is exercised
+# by a producer for the first time. Fabricated material, committed deliberately as evidence.
+!fixtures/2026-07-standing-orders/
+
+# The eighth run, and the first to carry a framed opportunity. Stage 2.3 did not exist before 26 August:
+# this run is the only evidence that a problem hypothesis can be framed on the bank's own eleven-section
+# Opportunity template and reach a decision gate. Its first execution found three checks that still
+# resolved the prioritised set against hypotheses after the specification had moved to opportunities, so
+# writing the old ids would have passed the gate and produced the wrong artifact. It is also the first
+# brief to carry `qualitative_signal` and the first run whose material includes a customer rather than
+# only bank staff. Fabricated material, committed deliberately as evidence.
+!fixtures/2026-08-account-switching/
+
+# Runs deliberately NOT in the tree. C95 reads these: a run that is neither tracked nor declared here
+# fails, and the reason is the half that matters — a run held back for carrying client material is
+# correct and must never be forced into the tree by a check that only counts.
+
+# Raw client traces. They hold tool names, file paths, models, token counts and the repository's address, and no
+# prompt text on Copilot Chat 0.66; the paths name the run, and a later version or a policy can change what is
+# captured. Handled the way the corpus extraction is — it never leaves the machine, and what gets committed is the
+# reduced record `trace.mjs` writes into fixtures/{run_id}/traces/.
+.copilot-traces/
+
+# The negative suite's journal: the original of each file an arm changes, written before the change and deleted
+# after the restore, so a stopped suite's changes go back at the next start (GEN-2). It can hold copies of
+# registries and of an artifact, so it is never committed.
+.suite-journal/
+
+# Meeting notes and other source extracts are input, never versioned here.
+# They belong in SPOCK/sources/, which is never committed to any repository.
+insights.md
+
+# The 8 September run. **The first whose stage 4 set is in the shape the build has produced since
+# 7 September**, which is the shape no committed run carried and the reason C171 has had no negative case
+# since it was written. It is also the first fixture to carry the files a person supplied, so C159's join
+# between a cited file and a file on disk is exercised by a run rather than only by a mutation. Material
+# fabricated, committed deliberately as evidence.
+!fixtures/2026-09-digital-onboarding-dropoff/
+
+# W8's dry run, in Czech. The first run to meet the compliance screening, the first to declare a language,
+# and the first written under the standing instruction that every gate takes the first option. Fabricated
+# material, committed deliberately as evidence.
+!fixtures/2026-09-spending-insights/
+
+# W8's dry run, in English, and the pair to the Czech one above. The first run whose stage 3 carried real
+# outward research rather than fabricated sources, which is why its `egress_basis` is a live question
+# rather than a formality. Committed deliberately as evidence.
+!fixtures/2026-09-savings-goals/
+# A live discovery run lands here and is never versioned. Runs are working artifacts carrying a real
+# initiative's brief and the names of people who supplied material, and this repository is scoped for
+# source code. The ten fabricated runs under fixtures/ are the committed evidence; these are not.
+# **No `held:` line while the directory is empty** — that marker declares a run this repository is
+# deliberately keeping out of the tree, and a declaration matching nothing reads as coverage (C95).
+# Add one naming the run when a run exists.
+runs/*
+# **A `held:` line names a run on THIS machine, so it goes in `.github/runs-held`, which is ignored.**
+# One lived here until 5 September 2026 and shipped with the build: a run directory is ignored, so no clone
+# and no worktree ever had the run it named, and C95 was red in every tree but one. The rule three lines
+# above is the one that broke, and the fix is where the declaration lives rather than a softer check.
+.github/runs-held
+
+# The last task said this. Session state, overwritten every run.
+.github/last-task.md
+
+# The step guards' notes: one file per chat, and the log of every refusal and step-aside (H3). Session state.
+.github/.guard/

@@ -1,0 +1,312 @@
+workflow: "discovery"
+version: "0.1.0"
+owner: "igor.tadic"
+kind: fixed
+pattern: sequential
+input:
+  description: "A topic worth exploring, its goals, and problem material the team already holds"
+output:
+  description: "A delivery-ready initiative"
+
+# Every stage is built and every quality gate runs in full. Run 2026-01-mortgage-onboarding was driven
+# brief to initiative through all seven, and every registered check is implemented. The count is not
+# written here: this comment said 40 while `register.mjs --verify` reported 85, and nothing parses a YAML
+# comment against the generator, so the number drifted 45 behind with every build green. Run it instead.
+# A15 (Jira propagation) is the one parked part: stage 7 completes on A14 without it (PD141, C16).
+
+steps:
+  - id: brief
+    stage: 1
+    agent: product-manager
+    skill: brief-creation
+    requires: []
+    produces:
+      - A1
+    records:
+      - initiative-brief
+    gate:
+      checker: independent
+      criteria:
+        - run_id_assigned                 # C6
+        - required_fields_present_or_unknown   # C10
+        - goals_whole_and_linked               # C77
+    built: true
+
+  # **Stage 1 stopped screening on 1 September 2026, and the step is gone rather than emptied.** A product
+  # manager cannot say whether an idea engages a regime before the idea exists, so the screen's honest
+  # answer to most of what it examined was `cannot determine`. The same work runs per solution at stage 4,
+  # inside `ideation`, where there is something concrete for an area's own triggers to fire against. A1b is
+  # retired at §6.2b and two committed runs keep theirs.
+
+  - id: problems
+    stage: 2
+    composes: problems                    # a workflow in its own right
+    contract: .github/workflow-contracts/problems.workflow.yaml
+    requires:
+      - A1
+    produces:
+      - A4
+    built: true
+    # ── r1.12 · BC-47 §5.1 ── **The facts this stage carries from the ones before**, each as the person gave or chose it:
+    # the brief's fields, the opportunities prioritised at G2, the solution chosen at G4 and the option chosen at G5, each
+    # from the stage after the gate that decided it. `carriedFacts` reads them for the approval and the document's block.
+    carries:
+      - { label: Segment, cs: Segment, from: A1.customer_segment }
+      - { label: Market scope, cs: Rozsah trhu, from: A1.market_scope }
+      - { label: Channels, cs: Kanály, from: A1.screening_inputs.channels }
+      - { label: Time horizon, cs: Časový horizont, from: A1.time_horizon }
+      - { label: Constraints, cs: Omezení, from: A1.known_constraints }
+      - { label: Key result, cs: Klíčový výsledek, from: A1.goals.key_result }
+    # ── r1.10 · H14 §5.1 ── **What stage 4 needs from this stage, declared where the stage is.** Stage 4 forms three
+    # solutions from the opportunities prioritised here, and with fewer than three they share them. It can work with
+    # less, so the need warns: the heads-up at Q2, at the stop and at the approval (BD-099). Read by `nextStageNeeds`.
+    next_stage_needs:
+      - id: three-prioritised-opportunities
+        for_stage: 4
+        measure: prioritised_opportunities   # primary[] and secondary[] of A4, parked ones not counted
+        at_least: 3
+        when_short: warn
+
+  - id: market
+    stage: 3
+    composes: competitive-analysis
+    contract: .github/workflow-contracts/competitive-analysis.workflow.yaml
+    requires: [A1, A4]
+    produces: [A7]
+    built: true      # P-env granted (PD140); the quarantine bridge landed with the A6 build
+
+  - id: ideas
+    stage: 4
+    agent: product-manager
+    requires: [A1, A4, A7]
+    produces: [A8, A9]
+    # **Which skill produces which artifact, because `skill:` can only name one.** A step producing two
+    # documents from two skills had nowhere to say so, so ten of seventeen artifacts had no declared
+    # producer, `assemble.mjs` could not derive `produced_by` for them, and `C65` silently exempted every
+    # one. `human` means a person's, not an agent's: the writer drops `produced_by` there rather than
+    # inventing a skill, which is what a live run did to A9 on 3 September.
+    producers:
+      A8: ideation
+      A9: human
+    records: [idea-set]
+    built: true
+    # ── r1.12 · BC-47 §5.1 ── **The facts this stage carries from the ones before**, each as the person gave or chose it:
+    # the brief's fields, the opportunities prioritised at G2, the solution chosen at G4 and the option chosen at G5, each
+    # from the stage after the gate that decided it. `carriedFacts` reads them for the approval and the document's block.
+    carries:
+      - { label: Segment, cs: Segment, from: A1.customer_segment }
+      - { label: Market scope, cs: Rozsah trhu, from: A1.market_scope }
+      - { label: Channels, cs: Kanály, from: A1.screening_inputs.channels }
+      - { label: Time horizon, cs: Časový horizont, from: A1.time_horizon }
+      - { label: Constraints, cs: Omezení, from: A1.known_constraints }
+      - { label: Key result, cs: Klíčový výsledek, from: A1.goals.key_result }
+      - { label: Prioritised, cs: Upřednostněno, from: A4.primary }
+      - { label: Also prioritised, cs: Také upřednostněno, from: A4.secondary }
+    # R3.6-1 — a step whose job is N of one kind is N invocations. Stage 4 was the last step in this
+    # workflow still producing its whole set in a single pass: five ideas conceived in one generation and
+    # written up in six, which fixed the delivery failure and not the attention division (PT-037).
+    # Composed the way stage 3 profiles participants, and the phases are named here because a fan-out that
+    # lives only in a skill's prose is a composition nobody can read off the workflow.
+    fan_out:
+      over: ideas
+      bound: 3..5                       # C102; the floor is a legal answer (R3.7-3). **This is what the
+                                        # machine generates and not what the set may hold** — a person may
+                                        # take it to ten by adding, which is C4's ceiling. One number
+                                        # answered both until 8 September 2026 and the two drifted apart.
+      # Where the per-invocation briefs live. **`invocations:` had no reader until 3 September 2026**, so
+      # the composition below was a specification and the stage ran as one pass; `fanout.mjs` resolves the
+      # counts and writes the briefs here, and C160 asks whether the briefs a slate implies are the briefs
+      # on disk. Briefs are instructions to a producer and never artifacts: no id, outside records/ and
+      # read/, and no gate reads one.
+      brief_dir: briefs
+      phases:
+        - id: slate
+          invocations: 1
+          skill: ideation
+          writes: "4-solutions/briefs/slate.md — A8's envelope and one entry per idea carrying id, solves[] and supported_by[] only"
+          note: "names the set and authors none of it — the bounding step, which A5 is for stage 3"
+        - id: author
+          invocations: one_per_slate_entry
+          skill: ideation
+          effort_bound: per_instance     # R3.6-4 — a bound set per step is spent by whoever runs first
+          writes: "4-solutions/parts/{id}.md — its own file, never the artifact, including its compliance section"
+          note: >
+            One file per instance because the instances may run at once and the artifact is one file, and
+            because the part is the only thing the join's fidelity can be checked against (C104). The
+            first pass under this composition wrote into the artifact and the correction came from it.
+            **The compliance section is written here and not in a later phase**, because the instance that
+            has the solution in front of it is the one that can run an area's triggers against it, and a
+            screening pass added afterwards would be reading the join rather than the solution.
+        # **The derivation and the join are scripts from 7 September 2026, and neither is a model
+        # invocation.** `transfer_only` was a rule a producer was asked to respect; `solution-join.mjs`
+        # concatenates two files per solution in slate order and cannot summarise, normalise or re-title
+        # because it does not read what it copies. Stage 3's card join stopped being a model for the same
+        # reason. **`derive.mjs` runs between them**, turning each solution's own answers into the
+        # compliance section a person reads, with every fired touchpoint printed as its card wrote it.
+        - id: derive
+          invocations: 0                 # a script, not an invocation
+          script: .github/scripts/derive.mjs
+          writes: "4-solutions/parts/{id}.compliance.md — the paragraph, the count, the fired touchpoints, the areas, the flag and the open items"
+        - id: join
+          invocations: 0                 # a script, not an invocation
+          script: .github/scripts/solution-join.mjs
+          transfer_only: true            # R3.6-2 — structural now rather than asked for
+          checked_by: C104               # the artifact is compared against the parts, word for word
+          emits: one_item_per_write      # R3.6-5
+          writes: "A8 assembled from the parts behind one index table, unproduced[] for any instance that did not come back"
+    # **What no check here can decide.** How many invocations wrote an artifact is not readable from it.
+    # `trace_id[]` is the field that would say (C92) and no client has ever emitted a trace into this
+    # repository, so this block is a specification the build follows and cannot yet prove it followed.
+    # C102 holds the half that is on the artifact: a lost instance is stated, never silent.
+
+  # **The per-option screen stopped being a document on 1 September 2026.** Screening each solution is
+  # still what makes the regulatory side of the comparison discriminating; it is a section on the solution
+  # now, written by `ideation` in the same pass, and the sections differ from each other rather than from a
+  # retired initiative screen. A8c is retired at §6.9c and two committed runs keep theirs.
+
+  # **The scoring step was removed on 7 September 2026** (Igor). Stage 4 produces no score of any kind:
+  # `idea-scoring` is retired, `A8b` is retired with it, and what a person compares at `G4` is the
+  # touchpoint list and a count on `A8` itself. The step is deleted rather than dated off, because a
+  # contract step has no `until:` and a step that produces nothing is a step nothing needs. **Nine
+  # committed runs keep their `A8b`**, which stays declared at §6.9b and graded by the checks that have
+  # always graded it — `C112` asks what a contract produces, so a demand removed can fail nothing.
+
+  # **`A8` joined this list on 7 September 2026, and its absence was the reason stage 5 invented the
+  # interaction from nothing.** The selection is an id; the thing it points at is the solution's own seven
+  # sections, and stage 5 declared only the decision record, which is a person's three-paragraph
+  # restatement written at the gate. **Every section stage 4 was rebuilt to produce was read by nobody
+  # after it.**
+  - id: mvp
+    stage: 5
+    agent: product-manager
+    requires: [A9, A8, A7]
+    produces: [A10, A11]
+    producers:
+      A10: mvp-option-design
+      A11: mvp-expansion
+    records: [mvp-option]
+    built: true
+    # ── r1.12 · BC-47 §5.1 ── **The facts this stage carries from the ones before**, each as the person gave or chose it:
+    # the brief's fields, the opportunities prioritised at G2, the solution chosen at G4 and the option chosen at G5, each
+    # from the stage after the gate that decided it. `carriedFacts` reads them for the approval and the document's block.
+    carries:
+      - { label: Segment, cs: Segment, from: A1.customer_segment }
+      - { label: Market scope, cs: Rozsah trhu, from: A1.market_scope }
+      - { label: Channels, cs: Kanály, from: A1.screening_inputs.channels }
+      - { label: Time horizon, cs: Časový horizont, from: A1.time_horizon }
+      - { label: Constraints, cs: Omezení, from: A1.known_constraints }
+      - { label: Key result, cs: Klíčový výsledek, from: A1.goals.key_result }
+      - { label: Prioritised, cs: Upřednostněno, from: A4.primary }
+      - { label: Also prioritised, cs: Také upřednostněno, from: A4.secondary }
+      - { label: Chosen solution, cs: Vybrané řešení, from: G4 }
+
+  - id: prd
+    stage: 6
+    agent: business-analyst
+    requires: [A11, A1, A4]
+    produces: [A12, A13]
+    producers:
+      A12: prd
+      A13: prd
+    records: [prd]
+    built: true
+    # ── r1.12 · BC-47 §5.1 ── **The facts this stage carries from the ones before**, each as the person gave or chose it:
+    # the brief's fields, the opportunities prioritised at G2, the solution chosen at G4 and the option chosen at G5, each
+    # from the stage after the gate that decided it. `carriedFacts` reads them for the approval and the document's block.
+    carries:
+      - { label: Segment, cs: Segment, from: A1.customer_segment }
+      - { label: Market scope, cs: Rozsah trhu, from: A1.market_scope }
+      - { label: Channels, cs: Kanály, from: A1.screening_inputs.channels }
+      - { label: Time horizon, cs: Časový horizont, from: A1.time_horizon }
+      - { label: Constraints, cs: Omezení, from: A1.known_constraints }
+      - { label: Key result, cs: Klíčový výsledek, from: A1.goals.key_result }
+      - { label: Prioritised, cs: Upřednostněno, from: A4.primary }
+      - { label: Also prioritised, cs: Také upřednostněno, from: A4.secondary }
+      - { label: Chosen solution, cs: Vybrané řešení, from: G4 }
+      - { label: Chosen option, cs: Vybraná možnost, from: G5 }
+
+  - id: initiative
+    stage: 7
+    agent: business-analyst
+    requires: [A13]
+    produces: [A14, A15]
+    producers:
+      A14: initiative-authoring
+      A15: initiative-propagation
+    records: [initiative]
+    built: true      # A14 runs; A15 propagation parked (PD141)
+    # ── r1.12 · BC-47 §5.1 ── **The facts this stage carries from the ones before**, each as the person gave or chose it:
+    # the brief's fields, the opportunities prioritised at G2, the solution chosen at G4 and the option chosen at G5, each
+    # from the stage after the gate that decided it. `carriedFacts` reads them for the approval and the document's block.
+    carries:
+      - { label: Segment, cs: Segment, from: A1.customer_segment }
+      - { label: Market scope, cs: Rozsah trhu, from: A1.market_scope }
+      - { label: Channels, cs: Kanály, from: A1.screening_inputs.channels }
+      - { label: Time horizon, cs: Časový horizont, from: A1.time_horizon }
+      - { label: Constraints, cs: Omezení, from: A1.known_constraints }
+      - { label: Key result, cs: Klíčový výsledek, from: A1.goals.key_result }
+      - { label: Prioritised, cs: Upřednostněno, from: A4.primary }
+      - { label: Also prioritised, cs: Také upřednostněno, from: A4.secondary }
+      - { label: Chosen solution, cs: Vybrané řešení, from: G4 }
+      - { label: Chosen option, cs: Vybraná možnost, from: G5 }
+
+quality_gates:
+  Q1: { stage: 1, checks: [C10, C77], built: true }
+  Q2: { stage: 2, checks: [C1, C2, C27, C33, C34, C35, C37, C39, C52, C53, C69, C82, C115, C116, C117, C118, C137, C159, C172, C177, C193], built: true }
+  Q3: { stage: 3, checks: [C3, C8, C9, C24, C54, C55, C56, C60, C66, C75, C76, C81, C84, C86, C87, C88, C101, C137, C181, C182, C184, C190], built: true }
+  Q4: { stage: 4, checks: [C4, C5, C7, C11, C26, C59, C70, C83, C102, C103, C106, C125, C126, C129, C137, C153, C160, C164, C166, C190], built: true }
+  Q5: { stage: 5, checks: [C4, C7, C11, C12, C15, C58, C130, C153, C171, C185, C190], built: true }
+  Q6: { stage: 6, checks: [C12, C13, C7, C31, C67, C130, C131, C153, C171, C185, C190], built: true }
+  Q7: { stage: 7, checks: [C12, C13, C16, C57, C111, C175, C190], built: true }
+
+# Every check §7.4 marks `all`. Restated here for a reader and checked against the gate by C44 —
+# this file is the fourth place a check list is asserted, and it had drifted eight checks behind.
+# All seven gates are declared. It restated three for a week, so C44 compared three and the other four
+# were unguarded — a contract that describes part of a build is read as describing all of it.
+universal_checks: [C6, C14, C17, C18, C19, C22, C23, C25, C28, C29, C30, C32, C36, C38, C40, C51, C62, C65, C78, C80, C92, C97, C98, C99, C100, C104, C107, C108, C109, C112, C122, C138, C139, C143, C151, C162, C163, C167, C168, C169, C170, C180, C189, C187, C206]
+
+# **Every decision gate is listed here, not some of them.** This file is where an operator looks up which
+# decisions a person owes, and a partial list misinforms them with the authority of a contract. The stage-3
+# line below is written because an absent key would read as an omission. Nothing in the scripts reads this
+# key, so only a person holding the contract and the business logic's decision-gate table side by side
+# would find a gate missing.
+human_gates:
+  - { id: G1, stage: 1, actor: product-manager, decides: "brief complete enough to proceed" }
+  - { id: G2, stage: 2, actors: [researcher, product-manager], decides: "opportunities confirmed, priorities set" }
+  # Stage 3 has NO human gate by decision. Q3 is its whole acceptance.
+  - { id: G4, stage: 4, actor: product-manager, decides: "one solution selected, and it becomes the selected solution" }
+  # Stage 5 is decided at G5b, when the expansion is accepted. The MVP option is chosen before that, as a
+  # recorded decision while the stage is running; the gate that chose it at review was retired on
+  # 10 September 2026, and runs before then carry its record on the options document.
+  - { id: G5b, stage: 5, actor: product-manager, decides: "expansion accepted before the PRD is built on it" }
+  - { id: G6, stage: 6, actor: product-manager, decides: "PRD agreed, and the name and date are written" }
+  - { id: G7, stage: 7, actor: product-manager, decides: "initiative approved as a delivery item" }
+
+entry:
+  note: >
+    Any agent is a valid front door, and starting always begins at the beginning. An agent invoked with
+    no run in progress starts a run at the brief, says where the process begins, and points at what
+    comes first. None is a shortcut past the stages before it.
+
+hard_stops:
+  - compliance_proof_missing
+  - trace_missing
+  - required_human_signoff_missing
+  - agent_recorded_an_approval             # C14
+
+runtime_routing: forbidden
+
+# Process-level assurance (Workflow Blueprint §5, R5-1/2/4). Evaluating each step is not enough for a
+# process built from several: reliability compounds downward, so the workflow asserts two things of its own,
+# reported alongside the per-step gates, never instead of them. C48 enforces this block at build.
+workflow_assurance:
+  achieves_goal:
+    cases: workflows/discovery/evals/
+    status: pending          # R5-4 — graded only where the suite exists; none does yet, so it reads pending
+    asserts: >
+      the assembled initiative satisfies the workflow's declared output, not merely that
+      each step satisfied its own contract
+  edges_match:
+    asserts: >
+      what each step produces satisfies the declared input of the step that consumes it,
+      for every edge from brief to initiative

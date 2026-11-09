@@ -1,0 +1,12 @@
+# Every text file checks out with Unix line endings, on every machine, whatever git is set to locally.
+#
+# **Git for Windows converts line endings on checkout by default** (`core.autocrlf=true`), so without this file each
+# machine decided for itself what a tester's copy looked like: two people on one release could hold byte-different
+# copies of the same workflow, and only one of them would meet a defect. On 23 September 2026 a run stopped at stage 1
+# because a document carried Windows line endings, and the parser's closing fence was matched by exact string
+# equality. That half is fixed where files are read, which covers anything a person writes or is sent. This is the
+# other half: what we ship arrives identical everywhere.
+#
+# `text=auto` lets git decide what is text, and every file it decides is text checks out with `eol=lf`. No tracked
+# file carries a carriage return today, so this changes no committed byte; `C186` refuses the first one that tries.
+* text=auto eol=lf

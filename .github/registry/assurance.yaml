@@ -1,0 +1,265 @@
+# What is re-proven, how often and by whom: one entry per subject, with the files it covers and the day it was last proven (`last_proven`).
+# Read by repo-check.mjs, facts.mjs, and judge.mjs (who may decide a judged rule).
+# Edited by hand when a subject is added or re-proven: a change to a file an entry covers moves that entry's `last_proven` to the day of its proof.
+# Checked by C49, which fails when a covered file changed after its subject's `last_proven`.
+
+version: "0.1"
+owner: igor.tadic          # Pending an Engineering owner before
+                           # the pilot is operated by anyone else — the same pending note area.md carries.
+
+model_assurance:
+  subject: every agent binding
+  cadence: 30d
+  maximum_interval: 30d
+  owner: igor.tadic
+  state: not_performable
+  reason: >
+    Re-derivation only means something where the model produces output a deterministic check can
+    disagree with. This build has exactly one such mechanism — the trust arithmetic in trust.mjs, which
+    recomputes every tag independently of the agent that wrote it — and as of 2026-08-10 it IS wired
+    into a gate (C52, Q2). One of the two triggers below has therefore landed. The other has not: both
+    runs are fictional and hand-authored, so the comparison currently grades a tag a person typed, and
+    re-running it tests this repository's code rather than the model. Declaring a cadence for a ritual
+    nobody can perform is the failure this repository exists to refuse, so the state is recorded as it
+    is (PD142 — a Copilot model label is a menu entry, not a version, so behaviour can change behind an
+    unchanged pin).
+  performable_when:
+    - a run is executed on the target surface by an agent rather than authored by hand
+    - "MET 2026-08-10 (C52): the trust arithmetic is wired into Q2, so the agent's tag and the
+      independent recomputation are compared on every run rather than merely comparable"
+  when_both_met: >
+    The subject becomes performable and this block moves to state: current with a last_proven date. The
+    first agent-produced run is the only thing standing between here and there.
+  disposition_on_failure: withdraw the binding from delivery-stage use and notify its owner
+
+held_out_suites:
+  # **B8, 29 August: this suite exited 1 and appeared in no documented command.** ČS Engineering runs the
+  # commands copilot-instructions.md names, gets greens, and never learns the repository's own
+  # held-out suite is red. Two causes, both closed: `rubric.mjs` carried a sixteen-id skill list against a
+  # nineteen-entry registry, so a leak of three registered ids into a document a person reads was invisible
+  # to the one rule written to catch it; and three cases declared expectations the runner cannot compute,
+  # which were reported as failures rather than as expectations decided elsewhere.
+  #
+  # **`C105` accounts for a suite existing. Nothing graded one.** That is the gap this subject closes.
+  subject: every skill's held-out evaluation suite
+  cadence: 30d
+  maximum_interval: 45d
+  owner: igor.tadic
+  state: current
+  last_proven: 2026-10-08
+  proof: node .github/scripts/eval.mjs
+  proves_configuration:
+    - .github/scripts/eval.mjs
+    - .github/scripts/rubric.mjs
+    - .github/registry/skills.yaml
+  note: >
+    Blueprint §5.2 makes a held-out suite a condition of a skill being accepted. The runner discovers the
+    cases rather than wiring them, so adding one to a skill needs no change to any script, and C105 fails
+    a skill that declares a suite it does not have. An expectation the runner cannot compute is named with
+    who does decide it — a registered check that reads the artifact's record, or a judge that is not
+    configured — and is never counted as a pass. A key in neither set is still a failure, so a typo cannot
+    become a deferral.
+  disposition_on_failure: the skill returns to its author; a red suite is not a documented exception
+
+enforcement_points:
+  cadence: 90d
+  maximum_interval: 90d
+  owner: igor.tadic
+  state: current
+  # **The suite exits 0 again, and it had not since 4 September 2026.** Proven on 12 September on this
+  # base, after a rebase across eleven commits re-dated the work. Two arms missed on
+  # some checkouts and passed on others, which is why neither was recorded anywhere: `C145 glob
+  # pinned` compared a glob against `root`, the MESSAGE string, so `fixtures/**/*.md` was tested against
+  # `"fixtures/ or runs/"` and that clause was dead in any checkout whose runs root is not the corpus;
+  # and `record refuses incomplete` broke when `.github/surface` was committed as `copilot`, since the
+  # file beats the environment, so a scratch run declared a surface the process had not observed and
+  # `C162` turned an INCOMPLETE gate into a failing one.
+  #
+  # **What the two of them hid is the reason this note stays.** The suite stops before its own coverage
+  # assertion the moment an arm fails, so for a week the line naming a check with no negative case was
+  # never printed. `C139` had none and now has one; `C171` declares its gap and is counted as a gap.
+  last_proven: 2026-10-09
+  proof: node .github/scripts/check.test.mjs
+  # **R5.4-2 names two triggers and only one was ever checked** (AU-19, 23 August). This block declared
+  # `state: current` against 2026-08-10 while `gates.mjs` and `check.mjs` took forty commits after that
+  # date, so the record asserted a proven control set over a control set that had been rewritten since
+  # the proof ran — and C49 measured elapsed days only, so the build printed "no subject is past its
+  # interval" underneath it. The list below is the configuration the proof covers, and C49 now asks git
+  # when each file last moved and refuses a `current` that predates any of them. The suite itself is on
+  # the list on purpose: a suite edited after it was last run is not the suite that ran. **Editing any
+  # file named here obliges re-running the proof and moving `last_proven` to the day it ran.**
+  proves_configuration:
+    - .github/scripts/gates.mjs
+    - .github/scripts/check.mjs
+    - .github/scripts/check.test.mjs
+    - .github/scripts/repo-check.mjs
+    # **S12: the registries a check DECIDES from were not on this list.** `register.mjs --verify` matches
+    # check ids, not what they decide, so a check weakened by editing the registry it reads would keep its
+    # id, keep its row, and go on passing. Every producing agent holds `editFiles` with no path scope and
+    # nothing in this repository can withhold it — the grant is a floor. What is enforceable is that
+    # editing one of these obliges re-running the proof and moving `last_proven` to the day it ran, and
+    # C49 fails a `current` that predates any file here.
+    - .github/registry/egress.yaml
+    - .github/registry/agents.yaml
+    - .github/registry/scoring.yaml
+    - .github/registry/claims.yaml
+    - .github/registry/fixtures.yaml
+    - .github/registry/rule-echoes.yaml
+    - .github/registry/rule-sentences.yaml
+  note: >
+    The negative suite is the proof, and it reports its own size when it runs rather than being counted
+    here — this line said 212 while the suite held 221. Every check is observed both refusing a known-bad input and
+    passing a healthy one, which is what R5.4-2 asks of a run-time enforcement point. It proves the
+    checker, never the model — that distinction is why model_assurance is a separate subject above.
+  covers:
+    - Q1
+    - Q2
+    - Q3
+    - Q4
+    - Q5
+    - Q6
+    - Q7
+    - the quarantine boundary (material-intake, market-content-extract — empty capability lists)
+    - the composed-behaviour floor (composed-floor@0.1)
+  gap: >
+    R5.4-2 also requires proof traffic to be marked as such in the record, so a self-test is
+    distinguishable afterwards from a real refusal. Nothing marks it today. Stated, not closed.
+
+improvement_loop:
+  cadence: monthly
+  maximum_interval: 45d
+  owner: igor.tadic
+  state: withdrawn
+  reason: >
+    Paused by the owner on 17 September 2026 while the workflow is being tested. Each driven test run
+    already does this work: what a person sent back is read, grouped into findings, fixed and tested
+    again. The owner reopens the monthly review when that is no longer so, and the state returns to
+    current with the date of the first session.
+  last_session: 2026-08-10
+  note: >
+    Read the refinement rounds recorded since the last session, group them, and let each group leave as
+    exactly one of the three outcomes below. Bounded to one session — a review that deliberates
+    expensively about what to change costs more than it returns (PD149).
+  outcomes:
+    - mechanical_check
+    - eval_case
+    - method_change
+  # **This line said "Nothing yet" for two days after the runs stopped agreeing with it.** It was written
+  # on 2026-08-10, when it was true, and then it froze: `2026-06-instant-payment-disputes` recorded a
+  # stage-1 round on 2026-08-21 — the only input the outer loop has ever had — while the registry went on
+  # telling whoever runs the session there was nothing to read (AU-26). C49 reads cadence, interval, owner
+  # and state and never opens a run, so nothing compared the claim with the records it is a claim about.
+  # The field now names the command that counts the rounds instead of carrying a count of its own, so what
+  # can go stale here is a dated illustration and not the instruction.
+  first_session_reads: >
+    The refinement rounds recorded since `last_session`, read off the run records rather than restated
+    here: `node .github/scripts/metrics.mjs` prints "Refinement rounds recorded across every run and
+    every gate" and names each one under the run that holds it. On 2026-08-23 that was one — stage 1,
+    artifact A1 on `2026-06-instant-payment-disputes`, refined by Igor Tadic on 2026-08-21 (PD149/L1 made
+    the round recordable on 2026-08-10). The same command reports that run's material as fabricated
+    (pilot-test), so the session decides whether a round taken over invented material earns one of the
+    three outcomes; it does not get to skip reading it. The session is run by hand before any part of it
+    is automated.
+
+output_variance:
+  subject: every skill binding, one held-out input, k trials
+  cadence: 90d
+  maximum_interval: 90d
+  owner: igor.tadic
+  state: current
+  last_derived: 2026-09-30
+  proof: specifications/evidence/variance-2026-09-30/
+  result: held
+  rounds: 1
+  previous: specifications/evidence/variance-2026-08-14/   # breach over 3 rounds; its README carries the history
+  # **Taken again on 30 September 2026 on the same binding and input, and the bound held:** 10 of 10 compared properties.
+  # Trust tags in all three trials: strong on the beneficial-owner stall, weak on the upload rejection and the completion gap.
+  # The history before it, a breach over three rounds on 14 August 2026, is in the `previous` folder and its README.
+  #
+  # **`state: current` claims one thing only: the measurement has been taken inside its interval.** It does
+  # not claim the bound was met — `result` says whether it was — and it does not claim the target surface was
+  # measured. See `surface` below.
+  surface: other-agent-tool
+  surface_note: >
+    The trials ran on another agent tool, not in Copilot, so nothing here says what the variance is there, and
+    the measurement is owed again on Copilot.
+  previous_reason: >
+    PD148/D4, superseded 14 August. It read: variance is a property of generation, and nothing in either
+    committed run was generated, so running the same input three times would measure a person typing
+    rather than a model producing. That was true until an agent generated an artifact. **The precondition
+    below said "on the target surface" and was reworded the same day**, because what the subject actually
+    requires is that the artifact was generated rather than authored — the surface is a separate question
+    and is recorded as one rather than folded into this state.
+  trials: 3
+  measured: >
+    The structural properties the gate already computes, compared across trials rather than within one:
+    the cardinality of the produced set, the identifiers it binds to upstream artifacts, the derived trust
+    or confidence values, and which reduction markers the run set. Prose is not compared — wording differs
+    between trials by design and says nothing about reliability.
+  bound: >
+    Identical on every compared property across all three trials. Any difference is a breach. There is no
+    tolerance band, because a band over a set of structural facts is a threshold over a rubric by another
+    name (R5.2-4), and because the first measurement's job is to find out how large the variance is rather
+    than to certify it against a number nobody has evidence for.
+  # Stage-scaled, and the scaling is where the work is composed rather than how a case is graded (R5.2-5).
+  # An exploratory stage that varies is information; a delivery stage that varies is a defect reaching a
+  # person, because stage 6 and stage 7 are what the bank receives.
+  disposition:
+    exploratory: record_on_the_run
+    delivery: halt
+  stages:
+    exploratory: [1, 2, 3, 4, 5]
+    delivery: [6, 7]
+  performable_when:
+    - an artifact is generated by an agent rather than authored by hand
+    - the same input can be replayed without the run identifier colliding (C6 assigns it once per run)
+    # Met on 14 August by a held-out input outside `fixtures/`, which satisfies the second clause by
+    # construction: there is no run identifier to collide.
+  disposition_on_breach: >
+    At an exploratory stage the run records the breach on the artifact and continues; the record is what
+    the monthly improvement session reads. At a delivery stage the stage does not reach a person: it
+    returns to the skill through the existing produced → q_failed edge, the same path a failed quality
+    gate takes, so nothing new can block work that the graph does not already allow.
+
+# ── The independent checker ─────────────────────────────────────────────────────────
+#
+# R5.3-2 / AB-24 — subjective quality is judged by a different model family than produced the output.
+# R5.3-3 / AB-25 — the checker can stop the work; a verifier that cannot block is not a control.
+#
+# **`state: absent` is a first-class, legal value.** A pilot with no second family is not misconfigured;
+# it is a pilot whose judged half does not run, and which says so at every gate (C1). C50 reads
+# this block: where a family is configured it must differ from every producer family it judges; where it
+# is absent it reports the recorded reason and does not silently pass. **The refusal to run belongs in
+# judge.mjs, not here** — a repository check red from birth until a procurement decision lands would make
+# the five-command contract meaningless, and would teach people to ignore red.
+
+independent_checker:
+  state: absent
+  absent_reason: >
+    No second model family is configured. All 17 bindings declare the same model family, so a judge
+    would share the producer's lineage and its blind spots, and a pass would be the producer agreeing with
+    itself — which Blueprint principle 3 forbids. Decided rather than deferred: enable a
+    family in the Copilot model picker, use a sampled human check and record it as exactly that, or accept
+    the unjudged rules as a stated known gap. **A larger model from the same family is not an option** — it
+    satisfies the wording of R5.3-2 and defeats its purpose.
+  # what the decision is actually worth, measured rather than assumed (JUDGED_RULES in gates.mjs)
+  buys: >
+    Run `node .github/scripts/facts.mjs` and read `rules_judged_reader_decidable`. That is what a second
+    family would decide. `rules_judged_process_reach` is what it would not decide at any price: those rules
+    ask HOW the output was produced, and the finished artifact does not hold the answer, so no reader of it
+    can settle them however good the reader is. `rules_mechanical`, `rules_mechanisable`, `rules_judged` and
+    `rules_total` are the rest of the split, and `C146` compares the mirror they come from against this
+    registry both ways.
+    **No number is written on this line, and that is the point.** It carried one from 29 August as "6 of 49"
+    and a second from then until 8 September as "9 rules ... of 71 ... 19 genuinely need judgment", each
+    written when it was true and then frozen — the second one inside the sentence recording that the first
+    had frozen. The block guarding this file reads structured entries and never a folded scalar, so prose
+    here moves under nobody. A count in this position is either replaced by the command that prints it or
+    it is registered in `claims.yaml`, and this one is now the former.
+  authority: may_fail_a_step        # AB-25. The path exists: gate <n> Q<n> fail → produced → q_failed
+  operated_by: harness              # never an agent; no agent's tool list can invoke the gate
+  # Built 2026-08-10 and declared only now that it exists — C50 requires a declared intake to resolve on
+  # disk, so this line cannot be written ahead of the file it names. judge.mjs produces no verdict itself:
+  # it refuses while no checker is configured (exit 4), and takes verdicts from a second family or a
+  # sampled human through the same door, each marked with its source.
+  verdict_intake: .github/scripts/judge.mjs

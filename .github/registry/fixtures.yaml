@@ -1,0 +1,7 @@
+# The example runs this repository ships, what each is for, and any check one of them is allowed to fail.
+# This release ships none.
+
+version: "0.1"
+owner: igor.tadic
+
+runs:

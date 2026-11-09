@@ -1,0 +1,36 @@
+---
+run_id: 2026-06-instant-payment-disputes
+record_id: R-A11-01
+artifact_id: A11
+item_id: ""
+produced_at: 2026-08-22
+created_at: 2026-08-22
+produced_by:
+  agent: product-owner
+  skill: mvp-expansion
+bounds_hit: []
+sources:
+  - A10
+  - A9
+external_sources: []
+trace_id: []
+option_id: OPT-B
+description: "OPT-B attaches automated ISO 20022 recall despatch to claim registration through existing contact-centre and branch channels, and delivers a timestamped confirmation simultaneously to the attending agent in their session tooling and to the client through an outbound digital channel. A claim is registered through existing staff systems; registration fires the ISO 20022 recall message to the receiving bank without routing through the recalls desk; the network returns a timestamp and a case reference; the despatch service issues two confirmations in the same event. The agent confirmation surfaces before the call or visit ends. The client confirmation is delivered through an outbound digital channel and carries the same timestamp and case reference. The pilot covers EUR-denominated instant payments via the RT1 network. CZK-denominated payments are out of scope until the CERTIS recall message path is confirmed. The pilot does not change the client-facing registration surface; the client initiates contact through a normal staff channel and the agent registers the claim. H2 is addressed by removing the handoff chain and the recalls-desk queue: the recall fires within seconds of registration rather than after the form has routed to and been worked by the recalls desk. H4 is addressed on both sides: the agent holds a timestamped in-session confirmation and the client holds an independent digital record, so both parties in the session share the same fact before the call or visit ends."
+strategic_touchpoints:
+  - touchpoint: "The automated despatch removes the manual recall-form routing step and the recalls-desk queue that agents handled between registration and despatch, reducing the daily administration time attributable to a recall registration to the registration itself."
+    basis: "SHD-4 - decrease average time a banker spends daily on administration. Served: the manual handoff chain is replaced by an automated trigger. The administration step the agent previously carried - filling the recall form, routing it, and following up - does not exist in OPT-B."
+  - touchpoint: "Claim registration to outbound recall message is a straight-through service process: no human handoff step breaks the chain between the client's registration and the bank's outbound action to the receiving bank."
+    basis: "AI-2 - increase share of sales and service processes that are fully straight-through. Served: the end-to-end path from claim intake to recall despatch becomes straight-through within the staff channel, with no manual step in between."
+  - touchpoint: "The client receives a timestamped digital confirmation in the same session, turning the service moment from a file-and-wait interaction into a confirmed and documented action the client can hold."
+    basis: "LVL-4 - increase perceived value for money measured by NPS methodology. Served: a client who receives their own timestamped confirmation in session holds a different impression of the bank's response than one who files and is told the desk will follow up."
+compliance_touchpoints:
+  - touchpoint: "The automated despatch must generate an audit record per claim that captures the registration timestamp, the outbound ISO 20022 message identifier, the RT1 acceptance timestamp, the agent identifier, the client identifier, the case reference, and the notification delivery status for both the agent and client confirmations."
+    basis: "absent - Compliance Guidelines not available for this run. The audit requirement is identified from general banking obligations for automated transaction processing. The specific retention period, required fields, storage location and log integrity standard must be confirmed when the Guidelines are available."
+  - touchpoint: "The outbound ISO 20022 recall message must conform to the EBA CLEARING RT1 scheme rules for SEPA Instant Credit Transfer recall. OPT-B scopes to EUR payments via RT1. CZK payments are excluded until the CERTIS recall message format is confirmed with a technical stakeholder."
+    basis: "absent - Compliance Guidelines not available for this run. The EBA CLEARING scheme rules govern the pacs.028 or camt.056 message format; these are the authoritative source and must be confirmed at the PRD stage."
+  - touchpoint: "The client notification must carry accurate information about what the recall means. The notification must state that despatch is a request to the receiving bank and not a guarantee of return, and that the receiving bank's cooperation is required. The notification must not state or imply that recovery is certain."
+    basis: "absent - Compliance Guidelines not available for this run. Regulatory requirements on the mandatory content and prohibited claims in outbound recall notifications are unconfirmed. The notification template cannot be finalised until these are reviewed."
+  - touchpoint: "The trigger from claim registration to recall despatch must run within an authenticated agent session and verify that the registering agent is authorised to initiate a recall on behalf of the client. No new authentication path is introduced; the pilot relies on the existing agent authentication stack."
+    basis: "absent - Compliance Guidelines not available for this run. The assumption that existing agent authentication is sufficient for automated recall initiation must be confirmed during PRD review."
+analyst_input: "Four items the PRD stage must resolve before requirements can be written. First, the outbound notification channel: the channel (SMS, push or both), the gateway, the content template including the compliance-required statements, the failure-handling path when delivery fails (does the agent assume responsibility for relay, and is there a retry), and the delivery confirmation requirement. Second, the audit log: the required fields (minimum listed in the compliance touchpoints), the retention period, the storage location, and whether the log must be independently verifiable against the RT1 network's own records. Third, the payment scope: the PRD must state the pilot scope as EUR-only, name the CERTIS question as an open dependency for CZK scope, and specify what confirmation a technical stakeholder must provide before CZK payments can be added. Fourth, the success measures: time from claim registration to message despatch has never been measured, client re-contact rate after filing a recall has never been measured, and agent handling time on a recall registration has never been measured. The PRD must agree a proxy measure and a direction before the pilot runs, because a pilot without a declared success threshold produces data but no decision. The horizon, owner and kill criterion for each measure are unresolved; the PRD stage must name them or record explicitly that they could not be agreed. Traceability: A11 traces to A9 (IDEA-05, selected at G4) and through it to A4 (H2 and H4 in the primary problem set, accepted at G2)."
+---

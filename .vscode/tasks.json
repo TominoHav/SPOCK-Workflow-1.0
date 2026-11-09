@@ -1,0 +1,1006 @@
+{
+  // The commands a run needs, as tasks, so driving a stage is a pick from the Run Task menu rather than a
+  // line composed by hand. S3: the "one keystroke" the target process rests on did not exist —
+  // `ls -a .vscode/` returned `settings.json` and nothing else.
+  //
+  // **This file used to say the agent on this surface holds no terminal.** That was never true: VS Code
+  // core registers `runInTerminal` and `runTask`, and the catalogue missed both because the scan looked
+  // for a literal string where those two name themselves through a variable. What is true is that no
+  // wrapper grants a terminal, which is a choice.
+  //
+  // **This block claimed the producing agents were granted `runTask`, and not one of them was, from the
+  // day it was written until 31 August 2026.** Every wrapper carried `readFile`, `createFile` and
+  // `editFiles`, so the sentence describing how the workflow drives itself described nothing on disk.
+  // **Since 31 August the four producing agents hold `runTask` and `getTaskOutput`.** The Product Manager
+  // was granted them first, alone, as a probe; a live Copilot session then observed the name resolving,
+  // the terminal opening and the agent reading the output back in the same turn, and the other three
+  // followed. That grant runs only what this file declares and nothing else, so it drives the workflow
+  // without any agent gaining the ability to run an arbitrary command.
+  //
+  // **Material Intake is deliberately not among them.** Its grant is reading a file and writing one, and
+  // widening it is a decision about the quarantine boundary rather than a step in rolling this out.
+  //
+  // **A task carrying an `${input:...}` is one no agent can complete**, observed live on 31 August: the
+  // box goes in front of the person, the agent cannot fill it, and the agent's turn ends there with the
+  // task's output unrecoverable afterwards. That is the mechanism an acceptance rests on and the reason
+  // every task the workflow triggers for itself takes no input. `.github/OPERATING-A-RUN.md` is the page that says which one to run when, and it is
+  // generated from the same registers these commands come from.
+  //
+  // Every task prompts for what it needs. Nothing here hardcodes a run id or a runs root: the root is one
+  // line in `.github/runs-root` and the tasks read it, so repointing the root moves every task with it.
+  //
+  // **What a person types into a box reaches the script through the environment, never through the command
+  // line.** A shell reads the command line first, so a quote typed into a box was removed, a `$` expanded and a
+  // pair of backticks run as a command. VS Code puts each `options.env` value into the task's environment as it
+  // was typed, and `task.mjs` hands `SPOCK_BOX_<id>` to the script where the command says `box:<id>`. The `env`
+  // entries follow the order of the `box:` words, because that is the order the boxes open in. The run is
+  // `run:id`, `run:dir` or `run:stage`, never a word starting with `@`, which PowerShell drops before the script.
+  //
+  // Each task also names itself in `SPOCK_TASK`, so its output can say which task ran and which boxes it opened; C179
+  // holds the name to the label.
+  "version": "2.0.0",
+  "inputs": [
+    {
+      "id": "runId",
+      "type": "promptString",
+      "description": "The run id: the year, the month and a short name, in lower case, as in 2026-10-card-freeze"
+    },
+    {
+      "id": "personName",
+      "type": "promptString",
+      "description": "Your name, as in Petra Nováková. The run records you as the person running it"
+    },
+    {
+      "id": "personRole",
+      "type": "promptString",
+      "description": "The role you decide in, as in Product Manager. It is filled in from here on, wherever a task asks your role"
+    },
+    {
+      "id": "jiraKey",
+      "type": "promptString",
+      "description": "The initiative's Jira key, as in PROJ-1234, or none yet if it has no key yet"
+    },
+    {
+      "id": "stage",
+      "type": "pickString",
+      "description": "Which stage",
+      "options": ["1", "2", "3", "4", "5", "6", "7"]
+    },
+    {
+      "id": "status",
+      "type": "pickString",
+      "description": "The stage's new status",
+      "options": ["running", "produced"]
+    },
+    
+    {
+      "id": "by",
+      "type": "promptString",
+      "description": "Your name, as in Petra Nováková. The record carries it as the person who decided"
+    },
+    {
+      "id": "keeper",
+      "type": "promptString",
+      "description": "Your name, as in Petra Nováková. The record carries it as the person keeping this run's market research for later runs; cards built on internal or non-public material stay in the run."
+    },
+    {
+      "id": "approver",
+      "type": "promptString",
+      "description": "Your name, as in Petra Nováková. You are accepting this stage, and the record will say so"
+    },
+    {
+      // **`exception` is on the list for the replace task, where it withdraws one sign-off** (21 September 2026). The
+      // record task shares the list; `exception` chosen there is refused and the refusal names both tasks.
+      "id": "decisionKind",
+      "type": "pickString",
+      "description": "What kind of decision this is. exception is for withdrawing a sign-off with 'SPOCK: replace a decision that no longer stands'; a check is signed off with 'SPOCK: sign off a check this run cannot meet'",
+      "options": ["choice", "direction", "exception"]
+    },
+    {
+      "id": "what",
+      "type": "promptString",
+      "description": "What was decided, in your own words, as in: we go ahead without this and ask the analytics team for the figure before the PRD. The record carries it beside the check you sign off"
+    },
+    {
+      "id": "decisionWhy",
+      "type": "promptString",
+      "description": "Why did you decide this, in your own words? For a choice, why that one, as in: SOL2 reaches the clients who leave at the second step, and SOL1 does not. For a direction, what you changed and why"
+    },
+    {
+      // The replace task's own words box. It asks why, in the words of the box above, because a replacement choice's
+      // words become the reason the selected-solution document carries.
+      "id": "replaceWhy",
+      "type": "promptString",
+      "description": "Why did you decide this, in your own words? For a choice, why that one, as in: SOL2 reaches the clients who leave at the second step, and SOL1 does not. For a direction, what you changed and why"
+    },
+    {
+      "id": "role",
+      "type": "promptString",
+      "description": "The role you decided in, as in Product Manager. Leave it empty to keep the role this run records for your name"
+    },
+    {
+      "id": "refineReason",
+      "type": "promptString",
+      "description": "Why it was sent back, in your own words, as in: the opportunities rest on one interview, and the survey arrived today"
+    },
+    {
+      "id": "keepWhy",
+      "type": "promptString",
+      "description": "Why the stage still stands as it is, in your own words, as in: the new brief changed the title only, and nothing stage 3 found depends on it"
+    },
+    {
+      "id": "stopReason",
+      "type": "pickString",
+      "description": "Why the run stops. low_value: the value does not justify the work. small_impact: the impact is too small to pursue. high_risk: the risk is not worth carrying. out_of_boundary: it belongs to another team or product.",
+      "options": ["low_value", "small_impact", "high_risk", "out_of_boundary"]
+    },
+    {
+      "id": "stopNote",
+      "type": "promptString",
+      "description": "Anything the record should say beyond the reason, in your own words. Leave it empty if the reason says it all."
+    },
+    {
+      "id": "supersedesAt",
+      "type": "promptString",
+      "description": "The date of the decision this one replaces, as the run shows it, as in 24. 9. 2026"
+    },
+    {
+      "id": "supersedeReason",
+      "type": "promptString",
+      "description": "Why the earlier decision no longer stands, in your own words, as in: the pilot budget moved to next year, so the smaller option stands"
+    },
+    {
+      "id": "stageOwner",
+      "type": "promptString",
+      "description": "The name of the person who is doing this stage's work, as in Tomáš Havlíček, when that is not the person who will accept it"
+    },
+    {
+      "id": "selection",
+      "type": "promptString",
+      "description": "The id of the one you chose, as the document shows it, as in SOL2. Leave it empty unless this is a decision of kind choice. A value that is not one of them is refused and the refusal lists them.",
+      "default": ""
+    },
+    {
+      "id": "stageOwnerRole",
+      "type": "promptString",
+      "description": "The role that person is doing the work in, as in Researcher. Leave it empty to keep the role this run records for that name"
+    },
+    {
+      // ── r1.11 · J-d7 §5.1 ── box 3 of the approval, where it was box 4 of a task of its own that nobody ran.
+      "id": "judgedVerdicts",
+      "type": "promptString",
+      "description": "Your answers to the questions this gate asks you, which the agent listed: y for yes, n for no, ? if you cannot tell, numbered as in 1y 2n. Optional: leave it empty to skip them, or leave a number out to skip that question. A skipped question is recorded as skipped. Leave it empty where this gate asks none."
+    },
+    {
+      // ── r1.11 · Z5 D5 ── the take-in's confirmation, on both tasks that take in supplied material: an agent that starts a
+      // task with a box is refused by the step guard, so what changed is taken in only on the person's word.
+      "id": "takeInChanges",
+      "type": "pickString",
+      "description": "Take in the supplied material the agent listed as new or changed? yes records all of it at once, no records nothing",
+      "options": ["yes", "no"]
+    },
+    {
+      // ── r1.11 · R3 §5.3 ── box 4 of the approval: the person's own words, empty allowed.
+      "id": "askedBefore",
+      "type": "promptString",
+      "description": "What you asked to be changed before approving, in your own words. Correct my list or leave it empty."
+    },
+    {
+      "id": "exceptionCheck",
+      "type": "promptString",
+      "description": "Which automated check(s) this run cannot meet, by number, as the gate reported them, as in C60, or C11,C12,C171 where one cause failed several"
+    },
+    {
+      "id": "exceptionReason",
+      "type": "promptString",
+      "description": "Why it cannot be met, in your own words, as in: no source publishes this figure for our market, so the document cannot cite one. Not that it was not met: why it cannot be"
+    },
+    {
+      // **What a sign-off says its failure points to** (Z31, 21 September 2026). The workflow is listed first, because
+      // Enter picks the first item, and a false workflow report costs a minute of triage where a false material report
+      // hides a fault in the workflow. The sign-off records the key, `workflow` or `material`.
+      "id": "exceptionCause",
+      "type": "pickString",
+      "description": "What the failure points to. The first if you think the workflow or the check is at fault rather than your material; the second if your material cannot give the check what it asks",
+      "options": ["the workflow looks wrong", "the material cannot meet it"]
+    },
+    {
+      "id": "withdrawFile",
+      "type": "promptString",
+      "description": "The file to take back, as in 2-opportunities/opportunities copy.md, as the agent names it from a check or as you choose it. A folder is listed, and taken back when you type it again with the count the listing printed. Leave it empty to take back what the checks report joined to nothing",
+      "default": ""
+    },
+    {
+      "id": "withdrawReason",
+      "type": "promptString",
+      "description": "Why it is not part of the run any more, in words a reader would understand, as in: a draft copy of the framed opportunities, kept by mistake"
+    },
+    {
+      "id": "editDocument",
+      "type": "promptString",
+      "description": "The document you changed, by its path inside the run, as in 1-brief/initiative-brief.md"
+    },
+    {
+      "id": "editWhat",
+      "type": "promptString",
+      "description": "What you changed, in your own words, as in: shortened the outcome to one sentence"
+    },
+    {
+      "id": "editWhy",
+      "type": "promptString",
+      "description": "Why you changed it, in your own words, as in: the committee reads only the first line"
+    },
+    {
+      "id": "editBy",
+      "type": "promptString",
+      "description": "Your name, as in Petra Nováková. The account of the change is recorded under it"
+    },
+    {
+      "id": "typedProblem",
+      "type": "promptString",
+      "description": "The problem, in your own words. It is saved exactly as you type it and added to the problem material"
+    },
+    // ── r1.11 · BC-25 ── the two boxes of "SPOCK: date the material that arrived without dates". A box cannot be filled
+    // by a script, so the first holds "as listed", which stands for the periods the read-in listed.
+    {
+      "id": "periods",
+      "type": "promptString",
+      "description": "The period each file without dates comes from, as the task output listed them, as in: as listed; tickets.csv: 2026-Q2. \"as listed\" takes the listed periods as they stand; correct or complete a file by adding file: period after a semicolon. A period is a year, a quarter or a month: 2026, 2026-Q2 or 2026-04. A file left without a period stays undated",
+      "default": "as listed"
+    },
+    {
+      "id": "periodsBy",
+      "type": "promptString",
+      "description": "Your name, as in Petra Nováková. The periods are recorded as your statement, under this name"
+    },
+    {
+      "id": "pastedBy",
+      "type": "promptString",
+      "description": "Your name, as in Petra Nováková. What you pasted is saved exactly as it is and recorded as yours, under this name"
+    },
+    {
+      "id": "traceFile",
+      "type": "promptString",
+      "description": "Path to the raw Copilot trace file, as in .copilot-traces/otel.jsonl — customer material from its first line",
+      "default": ".copilot-traces/otel.jsonl"
+    },
+    // ── r1.4 P6 · Z38 ── The four boxes of "SPOCK: correct a name on the record", after the stage pick list.
+    {
+      "id": "nameAsRecorded",
+      "type": "promptString",
+      "description": "The name as the record spells it now, as in Tomas Havlicek, exactly as the heads-up or the run's front page shows it"
+    },
+    {
+      "id": "nameCorrected",
+      "type": "promptString",
+      "description": "The name as it should be spelled, as in Tomáš Havlíček"
+    },
+    {
+      "id": "correctedBy",
+      "type": "promptString",
+      "description": "Your name, as in Petra Nováková. The record will say you made this correction"
+    },
+    {
+      "id": "correctWhy",
+      "type": "promptString",
+      "description": "Why the recorded spelling is wrong, in your own words, as in: the record spells my surname without its accents"
+    },
+    // ── r1.9 H15 ── The one box of "SPOCK: update this copy to the latest release". Until the box table of H13 takes it in,
+    // this description is its only declaration and carries its example, update.
+    {
+      "id": "updateHow",
+      "type": "pickString",
+      "description": "Pick update. Pick the second only if this task told you files of the workflow were changed on this computer: it keeps a copy of them and puts the release's back",
+      "options": ["update", "update, and set aside my changes to the workflow's own files"],
+      "default": "update"
+    },
+    // ── r1.11 BC-49 ── The one box of "SPOCK: check my setup": the tool a person uses SPOCK in, which the check saves in
+    // .github/surface in the form a run reads, so nobody edits that file by hand.
+    {
+      "id": "setupTool",
+      "type": "pickString",
+      "description": "Which tool you use SPOCK in",
+      "options": ["GitHub Copilot", "another agent tool"],
+      "default": "GitHub Copilot"
+    }
+  ],
+  "tasks": [
+    {
+      // **A decision that no longer stands is replaced, never deleted.** `C168` refuses a recorded choice
+      // older than the artifact it decided, which is the 6 September case: a run carried a selection made
+      // about a set that had since been superseded, and every check passed over it. Clearing it used to
+      // mean hand-editing `RUN-STATE.md`, the one file whose own header says agents do not write it.
+      "label": "SPOCK: replace a decision that no longer stands",
+      "type": "shell",
+      "command": "node .github/scripts/task.mjs run-state.mjs decide run:id box:stage --kind box:decisionKind --selection box:selection --what box:replaceWhy --by box:by --role box:role --supersedes box:supersedesAt --reason box:supersedeReason :: advance.mjs --waits",
+      "options": {
+        "env": {
+          "SPOCK_TASK": "SPOCK: replace a decision that no longer stands",
+          "SPOCK_BOX_stage": "${input:stage}",
+          "SPOCK_BOX_decisionKind": "${input:decisionKind}",
+          "SPOCK_BOX_selection": "${input:selection}",
+          "SPOCK_BOX_replaceWhy": "${input:replaceWhy}",
+          "SPOCK_BOX_by": "${input:by}",
+          "SPOCK_BOX_role": "${input:role}",
+          "SPOCK_BOX_supersedesAt": "${input:supersedesAt}",
+          "SPOCK_BOX_supersedeReason": "${input:supersedeReason}"
+        }
+      },
+      "detail": "Records a new decision and marks the earlier one superseded, with the reason. Both stay on the record: nothing about who decided what is lost. With kind exception it withdraws the sign-off dated in the date box and records nothing new; the selection box is not read. It ends by saying what the stage still waits on.",
+      "presentation": { "reveal": "always", "panel": "shared", "close": false },
+      "problemMatcher": []
+    },
+    {
+      // ── r1.4 P6 · Z38 ── **A name typed with a slip at an approval could not be corrected.** The approval records
+      // it as typed in three places — the stage owner, the gate entry and the decision block on the document — and
+      // the heads-up then named a task that reaches the decisions list alone. The only route left was sending the
+      // stage back and approving it again, which runs a gate for a spelling. This corrects the spelling and nothing
+      // else: both spellings stay, no stage moves, and no gate runs again.
+      "label": "SPOCK: correct a name on the record",
+      "type": "shell",
+      "command": "node .github/scripts/task.mjs run-state.mjs correct-name run:id --from box:nameAsRecorded --to box:nameCorrected --by box:correctedBy --reason box:correctWhy",
+      "options": {
+        "env": {
+          "SPOCK_TASK": "SPOCK: correct a name on the record",
+          "SPOCK_BOX_nameAsRecorded": "${input:nameAsRecorded}",
+          "SPOCK_BOX_nameCorrected": "${input:nameCorrected}",
+          "SPOCK_BOX_correctedBy": "${input:correctedBy}",
+          "SPOCK_BOX_correctWhy": "${input:correctWhy}"
+        }
+      },
+      "detail": "Corrects how a person's name is spelled on every stage that carries it, in one run: each stage's owner, its approval and the decisions standing on it, with one line per stage. Both spellings stay on the record, with who corrected it, when and why. Nothing is approved again and no stage moves. FOUR boxes.",
+      "presentation": { "reveal": "always", "panel": "shared", "close": false },
+      "problemMatcher": []
+    },
+        // ── The two a discovery user ever needs, and neither asks them anything ──────────────────────────
+    //
+    // **Every other task here prompts for a run id, a stage number, a status.** That is an operator's
+    // vocabulary, and the users are product managers and designers. These two take no input: the run is
+    // the one that is unfinished, the stage is the one that is not accepted, and what was produced is
+    // read off the disk against the workflow contract.
+    //
+    // Parameterless for a second reason. **An agent can run a task and cannot answer a prompt**, so a
+    // task carrying an input is one the workflow can never run for itself.
+    {
+      "label": "SPOCK: continue",
+      "type": "shell",
+      "command": "node .github/scripts/task.mjs advance.mjs",
+      "options": { "env": { "SPOCK_TASK": "SPOCK: continue" } },
+      "detail": "Does everything mechanical up to the next point where you have to decide something.",
+      "problemMatcher": []
+    },
+    {
+      "label": "SPOCK: approve what is in front of me",
+      "type": "shell",
+      "command": "node .github/scripts/task.mjs advance.mjs --approve --by box:approver --role box:role --answers box:judgedVerdicts --asked box:askedBefore",
+      "options": {
+        "env": {
+          "SPOCK_TASK": "SPOCK: approve what is in front of me",
+          "SPOCK_BOX_approver": "${input:approver}",
+          "SPOCK_BOX_role": "${input:role}",
+          "SPOCK_BOX_judgedVerdicts": "${input:judgedVerdicts}",
+          "SPOCK_BOX_askedBefore": "${input:askedBefore}"
+        }
+      },
+      "detail": "Your name, the role you accept in, your answers to the gate's questions, and what you asked to be changed before approving, in your own words; the last two are optional and may be left empty. FOUR boxes. At G4 it approves the choice you recorded with 'SPOCK: record a decision I made', and takes the solution from that record. At stage 5 it approves the expansion of the option you recorded with that task. The stage is attributed to you unless somebody else was already recorded as owning it, which 'SPOCK: record who owns this stage' is for. An agent must not start this. The boxes are the record that a person decided, and a producer that reaches for the task has already asked the wrong question.",
+      "presentation": { "reveal": "always", "panel": "shared", "close": false },
+      "problemMatcher": []
+    },
+    {
+      // **Only for a stage somebody else owns.** The acceptance attributes the stage to whoever signed it
+      // and says so out loud, which is right whenever one person does the work and accepts it. D26 wants
+      // every stage to name an owner and the bank case is four people across seven stages, so the question
+      // still has to be askable — it just stopped being asked of the person who has already answered it.
+      // Until 9 September 2026 it was asked at every gate, which cost two boxes on every acceptance and
+      // was the second signing defect of the 8 September run.
+      //
+      // It moves the stage to `running`, so it belongs at the START of a stage. Run against a stage that
+      // has already produced something it would cascade the stages after it as stale, which is the right
+      // behaviour for a re-run and the wrong one for naming a person.
+      "label": "SPOCK: record who owns this stage",
+      "type": "shell",
+      "command": "node .github/scripts/task.mjs run-state.mjs stage run:id run:stage running --owner box:stageOwner --role box:stageOwnerRole",
+      "options": {
+        "env": {
+          "SPOCK_TASK": "SPOCK: record who owns this stage",
+          "SPOCK_BOX_stageOwner": "${input:stageOwner}",
+          "SPOCK_BOX_stageOwnerRole": "${input:stageOwnerRole}"
+        }
+      },
+      "detail": "At the START of a stage, and only when the person doing the work is not the person who will accept it. Otherwise skip it: the acceptance attributes the stage to whoever signs it.",
+      "presentation": { "reveal": "always", "panel": "shared", "close": false },
+      "problemMatcher": []
+    },
+    {
+      "label": "SPOCK: start a run",
+      "type": "shell",
+      "command": "node .github/scripts/task.mjs run-state.mjs init box:runId --person box:personName --role box:personRole",
+      "options": {
+        "env": {
+          "SPOCK_TASK": "SPOCK: start a run",
+          "SPOCK_BOX_runId": "${input:runId}",
+          "SPOCK_BOX_personName": "${input:personName}",
+          "SPOCK_BOX_personRole": "${input:personRole}"
+        }
+      },
+      "detail": "Creates the whole tree, the run record and the front page, and records you as the person running it, in your role. Your role is filled in from here on, wherever a task asks it.",
+      "presentation": { "reveal": "always", "panel": "shared", "close": false },
+      "problemMatcher": []
+    },
+    {
+      // **A move a person asks for is never a way round a gate or the send-back.** Moving a stage to review or to
+      // accepted skipped the gate and the approval, and moving an accepted stage back to running left its signatures
+      // standing over documents being redone, so the redo's gate could not pass. The status box offers neither review
+      // nor accepted, and `--person` makes the writer refuse the move of an accepted stage and name the send-back. The
+      // edge stays open to scripts, which do not pass the flag.
+      "label": "SPOCK: move a stage",
+      "type": "shell",
+      "command": "node .github/scripts/task.mjs run-state.mjs stage run:id box:stage box:status --person",
+      "options": {
+        "env": {
+          "SPOCK_TASK": "SPOCK: move a stage",
+          "SPOCK_BOX_stage": "${input:stage}",
+          "SPOCK_BOX_status": "${input:status}"
+        }
+      },
+      "detail": "Moves a stage to running or to produced. It never puts a stage up for review or accepts one: the gate and the approval do that. A stage already accepted is redone with 'SPOCK: send a stage back to be redone'.",
+      "presentation": { "reveal": "always", "panel": "shared", "close": false },
+      "problemMatcher": []
+    },
+    {
+      "label": "SPOCK: run one gate",
+      "type": "shell",
+      "command": "node .github/scripts/task.mjs check.mjs --gate",
+      "options": { "env": { "SPOCK_TASK": "SPOCK: run one gate" } },
+      "detail": "The gate of the stage the run is on. pass, fail or incomplete. Incomplete is not a pass. Takes nothing: the run and the gate are both things the build already knows.",
+      "problemMatcher": []
+    },
+    // **What a failing check wants, printed beside the lines that failed.** An agent whose document failed the same check
+    // twice went and read the checker, where the check register and the stage's shapes body already said it. It opens
+    // no box, because a boxed task is the person's to run and it is the agent that needs this; the gate says which
+    // checks fail, so it explains every one of them.
+    {
+      "label": "SPOCK: explain what the gate failed",
+      "type": "shell",
+      "command": "node .github/scripts/task.mjs explain.mjs",
+      "options": { "env": { "SPOCK_TASK": "SPOCK: explain what the gate failed" } },
+      "detail": "For each check the gate of the stage the run is on fails now: what failed, what the check is for, from .github/COVERAGE-CHECKS.md, and the shape that passes, from the stage's shapes body where it has one. Runs the gate and records nothing. Takes nothing.",
+      "problemMatcher": []
+    },
+    {
+      // **The missing half of the re-run edge.** Putting an accepted stage back to `running` left the gate
+      // result, the signature and the decisions behind it, and raised a stale cascade against the stage's
+      // own outputs that C30 then demanded a human acceptance of. Resetting stage 4 that way on
+      // 7 September 2026 produced a run the checker refused three ways.
+      "label": "SPOCK: send a stage back to be redone",
+      "type": "shell",
+      "command": "node .github/scripts/task.mjs run-state.mjs retract run:id box:stage --by box:by --reason box:refineReason --role box:role",
+      "options": {
+        "env": {
+          "SPOCK_TASK": "SPOCK: send a stage back to be redone",
+          "SPOCK_BOX_stage": "${input:stage}",
+          "SPOCK_BOX_by": "${input:by}",
+          "SPOCK_BOX_refineReason": "${input:refineReason}",
+          "SPOCK_BOX_role": "${input:role}"
+        }
+      },
+      "detail": "Ends a stage's acceptance: its gate result and the signature, and withdraws the answers to its questions and the decisions on it, which stay on the record with the day and your reason. The work itself is taken back separately and kept. Every later stage that has been through its gate is marked stale, to be kept or redone once this stage is accepted again. A later stage still being written stays with its agent. A person's act, and it is recorded as one.",
+      "presentation": { "reveal": "always", "panel": "shared", "close": false },
+      "problemMatcher": []
+    },
+    {
+      // A later stage marked stale is kept as it is only by a person, only once every stage it is built on is
+      // accepted again, and only when its own gate passes on it as it stands. The boxes are that person's.
+      // **The role box opens last, on this task and on the send-back**, so every list numbering the first three
+      // stays right. The role recorded is the person's own, never the stage owner's.
+      "label": "SPOCK: keep a later stage as it is",
+      "type": "shell",
+      "command": "node .github/scripts/task.mjs keep.mjs run:id box:stage --by box:by --why box:keepWhy --role box:role",
+      "options": {
+        "env": {
+          "SPOCK_TASK": "SPOCK: keep a later stage as it is",
+          "SPOCK_BOX_stage": "${input:stage}",
+          "SPOCK_BOX_by": "${input:by}",
+          "SPOCK_BOX_keepWhy": "${input:keepWhy}",
+          "SPOCK_BOX_role": "${input:role}"
+        }
+      },
+      "detail": "For a stage marked stale because a stage it is built on was sent back or re-run. Once that stage is accepted again, this runs the stale stage's gate on it as it stands and, if it passes, records who kept it and why and accepts it again. If the gate fails, nothing is recorded, and the stage is sent back to be redone instead.",
+      "presentation": { "reveal": "always", "panel": "shared", "close": false },
+      "problemMatcher": []
+    },
+    {
+      // ── r1.10 · H2 FD-3 ── **A person stops a run with a task** (BD-070). The stop had a writer and a check and no task,
+      // so at the bootcamp two people moved a run's folder by hand to get it out of the way. A stop is final: the
+      // documents stay where and as they are, and no task restarts the run. The name box is the shared `by` box.
+      "label": "SPOCK: stop this run",
+      "type": "shell",
+      "command": "node .github/scripts/task.mjs run-state.mjs abandon run:id --by box:by --reason box:stopReason --note box:stopNote",
+      "options": {
+        "env": {
+          "SPOCK_TASK": "SPOCK: stop this run",
+          "SPOCK_BOX_by": "${input:by}",
+          "SPOCK_BOX_stopReason": "${input:stopReason}",
+          "SPOCK_BOX_stopNote": "${input:stopNote}"
+        }
+      },
+      "detail": "Stops this run for good, in your name and for one of four reasons. Its documents stay where and as they are, still readable, and nothing is moved or deleted. The run no longer appears to any task, and no task can restart it. A person's act, and it is recorded as one.",
+      "presentation": { "reveal": "always", "panel": "shared", "close": false },
+      "problemMatcher": []
+    },
+    {
+      "label": "SPOCK: stage 4 — the slate brief",
+      "type": "shell",
+      "command": "node .github/scripts/task.mjs fanout.mjs --stage 4 --phase slate --write",
+      "options": { "env": { "SPOCK_TASK": "SPOCK: stage 4 — the slate brief" } },
+      "detail": "Names the set and authors none of it. Run this before the authoring briefs.",
+      "problemMatcher": []
+    },
+    {
+      "label": "SPOCK: stage 4 — the author briefs",
+      "type": "shell",
+      "command": "node .github/scripts/task.mjs fanout.mjs --stage 4 --phase author --write",
+      "options": { "env": { "SPOCK_TASK": "SPOCK: stage 4 — the author briefs" } },
+      "detail": "One brief per slate entry. Needs the slate on disk first.",
+      "problemMatcher": []
+    },
+    {
+      "label": "SPOCK: stage 4 — derive the compliance sections",
+      "type": "shell",
+      "command": "node .github/scripts/task.mjs derive.mjs --write",
+      "options": { "env": { "SPOCK_TASK": "SPOCK: stage 4 — derive the compliance sections" } },
+      "detail": "Turns each solution's answers into the compliance section a person reads. A script, not a model.",
+      "problemMatcher": []
+    },
+    {
+      "label": "SPOCK: stage 4 — assemble the solution set",
+      "type": "shell",
+      "command": "node .github/scripts/task.mjs solution-join.mjs --write",
+      "options": { "env": { "SPOCK_TASK": "SPOCK: stage 4 — assemble the solution set" } },
+      "detail": "Assembles A8 from the parts, word for word, behind one index table. A script, not a model.",
+      "problemMatcher": []
+    },
+    {
+      // **The run record has eight ways to be written and four of them had no task**, so on Copilot they
+      // did not exist. `decide` was built on 4 September, proven on the live run from a terminal, and
+      // left unreachable by anybody driving the workflow the way ČS will. These two close the half that
+      // a person and a producer actually need.
+      //
+      // **The boxes here are right and the ones this file removed were not.** A decision's words, the
+      // person's name and the role they decided in ARE the artifact; nothing can compute them and no
+      // agent may supply them. That is the one case a prompt belongs.
+      "label": "SPOCK: record a decision I made",
+      "type": "shell",
+      "command": "node .github/scripts/task.mjs run-state.mjs decide run:id run:stage --kind box:decisionKind --selection box:selection --what box:decisionWhy --by box:by --role box:role :: advance.mjs --waits",
+      "options": {
+        "env": {
+          "SPOCK_TASK": "SPOCK: record a decision I made",
+          "SPOCK_BOX_decisionKind": "${input:decisionKind}",
+          "SPOCK_BOX_selection": "${input:selection}",
+          "SPOCK_BOX_decisionWhy": "${input:decisionWhy}",
+          "SPOCK_BOX_by": "${input:by}",
+          "SPOCK_BOX_role": "${input:role}"
+        }
+      },
+      "detail": "A choice you made, or a direction you set. Not a gate signature, which goes through the approval task, and not an exception, which goes through 'SPOCK: sign off a check this run cannot meet'. It ends by saying what the stage still waits on.",
+      "presentation": { "reveal": "always", "panel": "shared", "close": false },
+      "problemMatcher": []
+    },
+    {
+      // **A document a stage read that nothing declared.** The run already records a declared body a stage
+      // did NOT read. There was no field for the other direction, so at stage 7 of the second live run a
+      // producer read the 286,145-character business logic twice and the record of what shaped that
+      // initiative was incomplete while reading as complete.
+      //
+      // Recording it is not permission. A producer that needed something outside its declared bodies has
+      // found a gap in what it was given, and this makes that gap countable.
+      // **No agent in this build can delete, and a producer with no exit invents one.** Asked to drop two
+      // competitor cards, one wrote an artifact id that does not exist into a field, to disconnect the file
+      // from the run. A person then deleted four files by hand and nothing recorded it.
+      //
+      // Nothing is destroyed here: the file moves into the run's own superseded/, which C29 retains, with
+      // who took it back and why. Material under supplied/ is refused — that is the customer's, and an
+      // agent that can move it out of the run has the capability the delete grant was withheld for.
+      // **A person signing off a check the run genuinely cannot meet.**
+      //
+      // A gate returns pass, fail or incomplete, and until 4 September a fail had exactly two ways forward:
+      // satisfy the check, or change it. On the second live run the ten-participant floor was the case, and
+      // the answer taken was to change the rule — **a rule rewritten because one run could not meet it**,
+      // which is the wrong instrument.
+      //
+      // This is the third way, and it is deliberately narrow. One stage, one run, one reason. Never blanket,
+      // never inherited by a later stage's own failures (since 1.2 a finding about an accepted stage carries to the
+      // later gates that find it again, until that stage changes), and never available for a check nobody has written — a control
+      // that does not exist is not one a person can accept. The stage then reads "passed with a signed
+      // exception" wherever the result is shown, never "passed".
+      //
+      // **It named one check until 13 September 2026, and the repetition damaged the record.** The second
+      // full run signed C11, C12 and C171 on one cause and one gate run: three passes through this box,
+      // two of the free-text answers truncated mid-word and on the third the reason and the decision went
+      // in the wrong boxes. The rule was defended as stopping a blanket waiver, and what actually stops one
+      // is that the signature may name only checks that gate run recorded as failing — which the writer now
+      // enforces, on the id rather than on the count.
+      //
+      // **It existed from 4 September and could not be reached.** The general decision task offered
+      // `exception` on its menu and passed neither the check nor the reason, so choosing it failed — the
+      // same shape as half the run record being unwritable from the surface this pilot ships to.
+      // **A machine without the search extension is a declared supported state and had no entry.** The
+      // person puts one file in the run's own folder and this enumerates it: the hash, so a file edited
+      // after the stage read it can be caught, and the counts, so a supplied competitor dropped from the
+      // cards can be caught. **It reads no market content** — a script enumerating a folder is the
+      // workflow writing rather than an agent authoring, which is what keeps the quarantine where it is.
+      "label": "SPOCK: what market material has been supplied",
+      "type": "shell",
+      "command": "node .github/scripts/task.mjs market-material.mjs run:id --write --confirm box:takeInChanges",
+      "options": { "env": { "SPOCK_TASK": "SPOCK: what market material has been supplied", "SPOCK_BOX_takeInChanges": "${input:takeInChanges}" } },
+      "detail": "Stage 3, after the opening message, once the person has said to begin and has put one markdown file in the run's 3-competitive-analysis/supplied/ folder: it records their competitor and trend list, and the agent is instructed to work only from it. Where the list changed after it was recorded, it prints the competitors and trends before and after with both fingerprints, and records the new version with the fingerprint of the one before. ONE box: yes takes the list in, no records nothing. The person runs it; an agent must not start it. A run that searches needs none of this.",
+      "presentation": { "reveal": "always", "panel": "shared", "close": false },
+      "problemMatcher": []
+    },
+    {
+      "label": "SPOCK: sign off a check this run cannot meet",
+      "type": "shell",
+      "command": "node .github/scripts/task.mjs run-state.mjs decide run:id run:stage --kind exception --check box:exceptionCheck --reason box:exceptionReason --what box:what --by box:by --role box:role --cause box:exceptionCause",
+      "options": {
+        "env": {
+          "SPOCK_TASK": "SPOCK: sign off a check this run cannot meet",
+          "SPOCK_BOX_exceptionCheck": "${input:exceptionCheck}",
+          "SPOCK_BOX_exceptionReason": "${input:exceptionReason}",
+          "SPOCK_BOX_what": "${input:what}",
+          "SPOCK_BOX_by": "${input:by}",
+          "SPOCK_BOX_role": "${input:role}",
+          "SPOCK_BOX_exceptionCause": "${input:exceptionCause}"
+        }
+      },
+      "detail": "For the check or checks this run genuinely cannot satisfy, and only what the gate recorded as failing. One reason, and a last box asking whether the workflow looks wrong or the material cannot meet the check; a workflow answer is marked on the run's front page and listed by \"SPOCK: how the workflow performed\" for whoever maintains the workflow. Some checks can never be signed off. The stage then moves on carrying the failure: the run record keeps its gate result as failed with the sign-off recorded, and the run's front page shows the gate as failed and signed off, naming the checks and who signed them. A sign-off on a failure about a stage already accepted carries to the later stages' gates that find the same failure, until that stage changes, so nobody signs it again; this holds where the later gate was recorded on 1.2 or later, and a gate recorded earlier asks for its own.",
+      "presentation": { "reveal": "always", "panel": "shared", "close": false },
+      "problemMatcher": []
+    },
+    {
+      "label": "SPOCK: take something back",
+      "type": "shell",
+      "command": "node .github/scripts/task.mjs withdraw.mjs run:id --file box:withdrawFile --reason box:withdrawReason --by box:by",
+      "options": {
+        "env": {
+          "SPOCK_TASK": "SPOCK: take something back",
+          "SPOCK_BOX_withdrawFile": "${input:withdrawFile}",
+          "SPOCK_BOX_withdrawReason": "${input:withdrawReason}",
+          "SPOCK_BOX_by": "${input:by}"
+        }
+      },
+      "detail": "Moves a file into the run's superseded/ with a reason. Nothing is deleted, and supplied material is refused. A stage folder is taken back in one step once you confirm its listed files.",
+      "presentation": { "reveal": "always", "panel": "shared", "close": false },
+      "problemMatcher": []
+    },
+    {
+      // A person's own change to a document, recorded as theirs. The boxes are that person's, so no agent can
+      // write the mark or the account on their behalf.
+      "label": "SPOCK: record that I edited a document",
+      "type": "shell",
+      "command": "node .github/scripts/task.mjs hand-edit.mjs run:id --document box:editDocument --what box:editWhat --why box:editWhy --by box:editBy",
+      "options": {
+        "env": {
+          "SPOCK_TASK": "SPOCK: record that I edited a document",
+          "SPOCK_BOX_editDocument": "${input:editDocument}",
+          "SPOCK_BOX_editWhat": "${input:editWhat}",
+          "SPOCK_BOX_editWhy": "${input:editWhy}",
+          "SPOCK_BOX_editBy": "${input:editBy}"
+        }
+      },
+      "detail": "For a document you changed by hand while its stage is being written or reviewed. It marks the document as changed by a person and records what you changed and why, so the record does not say an agent wrote it. It refuses a stage that is already accepted, and the parts of a document the workflow writes itself, and says what to do instead.",
+      "presentation": { "reveal": "always", "panel": "shared", "close": false },
+      "problemMatcher": []
+    },
+    {
+      "label": "SPOCK: read in the problem material",
+      "type": "shell",
+      "command": "node .github/scripts/task.mjs problem-material.mjs run:id --write",
+      "options": { "env": { "SPOCK_TASK": "SPOCK: read in the problem material" } },
+      "detail": "Writes the problem-material record from the files you put in the run's 2-problems/supplied/. Writes nothing it read from them; it opens each only to list the files that carry no date, with the year each names, for you to confirm with 'SPOCK: date the material that arrived without dates'. Refuses if the record already exists.",
+      "problemMatcher": []
+    },
+    {
+      "label": "SPOCK: add problem material",
+      "type": "shell",
+      "command": "node .github/scripts/task.mjs problem-material.mjs run:id --add --confirm box:takeInChanges",
+      "options": { "env": { "SPOCK_TASK": "SPOCK: add problem material", "SPOCK_BOX_takeInChanges": "${input:takeInChanges}" } },
+      "detail": "Stage 2, after the record is written. Takes in every change to the run's 2-problems/supplied/ at once: a new file becomes a new item, a file edited after it was read in becomes a new item replacing the old one, a file moved into the run's superseded/ folder and a file removed stop counting, and nothing is renumbered or deleted from the record. A changed Word, PowerPoint or Excel file is converted again. ONE box: yes takes every listed change in, no records nothing. Writes nothing it read from the files, and lists any that carry no date as the read-in does. Works before stage 2 starts, while it is being written, once it is written, or after its check fails. Once it is in review or accepted, send stage 2 back first. The person runs it; an agent must not start it.",
+      "presentation": { "reveal": "always", "panel": "shared", "close": false },
+      "problemMatcher": []
+    },
+    {
+      "label": "SPOCK: add a problem in my own words",
+      "type": "shell",
+      "command": "node .github/scripts/task.mjs problem-material.mjs run:id --add --typed box:typedProblem",
+      "options": {
+        "env": {
+          "SPOCK_TASK": "SPOCK: add a problem in my own words",
+          "SPOCK_BOX_typedProblem": "${input:typedProblem}"
+        }
+      },
+      "detail": "Stage 2, after the problem material has been read in with 'SPOCK: read in the problem material'. One box: the problem, in your own words. They are saved exactly as you type them as a file in the run's 2-problems/supplied/, and added to the problem material as its next item. An agent never fills the box. Works before stage 2 starts, while it is being written, or after its check fails, and is refused at any other point.",
+      "presentation": { "reveal": "always", "panel": "shared", "close": false },
+      "problemMatcher": []
+    },
+    {
+      // ── r1.9 · BC-06 ── **What a person pasted in the chat reaches the run from their clipboard, through a task they
+      // run, and never through an agent**, so what is saved is exactly what they pasted and the box records who. It
+      // opens a box, so no agent completes it. At stage 3 a list is read by the market task's own reader before
+      // anything is written, and one with no competitor entry is refused in that task's words and saved nowhere.
+      "label": "SPOCK: take in what I pasted in the chat",
+      "type": "shell",
+      "command": "node .github/scripts/task.mjs pasted.mjs run:id run:stage --by box:pastedBy",
+      "options": {
+        "env": {
+          "SPOCK_TASK": "SPOCK: take in what I pasted in the chat",
+          "SPOCK_BOX_pastedBy": "${input:pastedBy}"
+        }
+      },
+      "detail": "Stage 2 or 3, with what you pasted in the chat still on your clipboard. One box: your name. At stage 3 it saves your market list in the run's 3-competitive-analysis/supplied/, recorded as yours, counted, and told what the gate holds each entry to; a list with no competitor entry is refused with the shape to fill, and nothing is saved. At stage 2 it adds the text to the problem material, marked as from the conversation. What it saves is exactly what you copied, with line ends made LF. An agent never fills the box.",
+      "presentation": { "reveal": "always", "panel": "shared", "close": false },
+      "problemMatcher": []
+    },
+    {
+      // ── r1.11 · BC-25 ── the person confirms when anonymised material comes from, once per file, in one box (BD-118 D8).
+      "label": "SPOCK: date the material that arrived without dates",
+      "type": "shell",
+      "command": "node .github/scripts/task.mjs problem-material.mjs run:id --periods box:periods --by box:periodsBy",
+      "options": {
+        "env": {
+          "SPOCK_TASK": "SPOCK: date the material that arrived without dates",
+          "SPOCK_BOX_periods": "${input:periods}",
+          "SPOCK_BOX_periodsBy": "${input:periodsBy}"
+        }
+      },
+      "detail": "Stage 2, where the read-in or the add listed files that carry no date, as anonymised material often arrives. Two boxes: the period each file comes from, holding \"as listed\" for the periods the list suggested, and your name. Each file's items record the period as your statement, with your name and the day, and nothing counts as dated until you confirm it. A file left without a period stays undated. An agent never fills the boxes. Works before stage 2 starts, while it is being written, or after its check fails, and is refused at any other point.",
+      "presentation": { "reveal": "always", "panel": "shared", "close": false },
+      "problemMatcher": []
+    },
+    {
+      "label": "SPOCK: record a body this stage could not read",
+      "type": "shell",
+      "command": "node .github/scripts/task.mjs run-state.mjs unread run:id",
+      "options": { "env": { "SPOCK_TASK": "SPOCK: record a body this stage could not read" } },
+      "detail": "The agent runs it when the gate names a know-how body a stage did not read because it landed the day the stage ran. It takes nothing: it records each such body with the reason the dates give, and refuses any other.",
+      "presentation": { "reveal": "always", "panel": "shared", "close": false },
+      "problemMatcher": []
+    },
+    {
+      "label": "SPOCK: record what I had to read",
+      "type": "shell",
+      "command": "node .github/scripts/task.mjs run-state.mjs read run:id",
+      "options": { "env": { "SPOCK_TASK": "SPOCK: record what I had to read" } },
+      "detail": "The agent runs it after listing, in its own record, a document it had to read that its stage does not declare. It takes nothing: it copies each entry into the run record.",
+      "presentation": { "reveal": "always", "panel": "shared", "close": false },
+      "problemMatcher": []
+    },
+    {
+      "label": "SPOCK: mark the PRD agreed",
+      "type": "shell",
+      "command": "node .github/scripts/task.mjs run-state.mjs agree run:id run:stage --by box:by",
+      "options": {
+        "env": {
+          "SPOCK_TASK": "SPOCK: mark the PRD agreed",
+          "SPOCK_BOX_by": "${input:by}"
+        }
+      },
+      "detail": "A person agrees the draft PRD, and the workflow writes the agreed PRD from it word for word. The producer of it never agrees it.",
+      "presentation": { "reveal": "always", "panel": "shared", "close": false },
+      "problemMatcher": []
+    },
+    {
+      "label": "SPOCK: check the whole run",
+      "type": "shell",
+      "command": "node .github/scripts/task.mjs check.mjs",
+      "options": { "env": { "SPOCK_TASK": "SPOCK: check the whole run" } },
+      "detail": "Every check the build implements, over the whole run. Takes nothing: the run is the one that is unfinished.",
+      "problemMatcher": []
+    },
+    {
+      "label": "SPOCK: which gates can run in full",
+      "type": "shell",
+      "command": "node .github/scripts/task.mjs check.mjs --gates",
+      "options": { "env": { "SPOCK_TASK": "SPOCK: which gates can run in full" } },
+      "detail": "Which half of each gate ran, and why the other did not. Takes nothing: the run is the one that is unfinished.",
+      "problemMatcher": []
+    },
+    {
+      "label": "SPOCK: regenerate the run's front door",
+      "type": "shell",
+      "command": "node .github/scripts/task.mjs run-readme.mjs --write",
+      "options": { "env": { "SPOCK_TASK": "SPOCK: regenerate the run's front door" } },
+      "detail": "Writes the run's front page again. Every task that touches a run already does this when it ends, so the page says what the task said; this is for a change made outside the tasks. Takes nothing.",
+      "problemMatcher": []
+    },
+    {
+      "label": "SPOCK: fill in the envelope",
+      "type": "shell",
+      "command": "node .github/scripts/task.mjs assemble.mjs --write",
+      "options": { "env": { "SPOCK_TASK": "SPOCK: fill in the envelope" } },
+      "detail": "The front matter of everything this stage has written, from the contract and the registers. On a run started on 1.16.1 or later it writes nothing while a stage is being written and says what is written at approval; on an earlier run it fills the front matter as before. Never touches the body or your answers, except the section headings of the initiative and the PRD, which it writes in the run's language.",
+      "problemMatcher": []
+    },
+    // **The stage used to advance only if the agent chose to run a second task, and on 2 September a
+    // producer chose not to.** It wrote the brief, ran the envelope and this check twice, read
+    // `Nothing is outstanding. Run \`SPOCK: continue\`.` back out of the terminal both times, and asked
+    // the person to accept the stage instead. Q1 had never run. The instruction was present in the task
+    // output the agent consumed and in §7 of a body it declares, and neither was followed — **which is
+    // this repository's own standard applied to itself: asking an agent to do something is not
+    // enforcement.**
+    //
+    // So the ordering is no longer the agent's to get right. `written.mjs` exits non-zero while anything
+    // is outstanding, so the chain stops exactly where it should and the advance happens only when the
+    // stage owes nothing. Run mid-stage it is still harmless: `advance.mjs` sees the missing artifacts
+    // and says to invoke the agent again.
+    {
+      "label": "SPOCK: check what is written, then continue",
+      "type": "shell",
+      "command": "node .github/scripts/task.mjs written.mjs --chain :: advance.mjs",
+      "options": { "env": { "SPOCK_TASK": "SPOCK: check what is written, then continue" } },
+      "detail": "Every document this stage owes and what the checks say about each, then every mechanical move up to the next point you have to decide. Stops on the check if anything is outstanding. On a run started before 1.16.1 it fills the envelope first.",
+      "problemMatcher": []
+    },
+    {
+      // ── r1.10 H13 §5.7 ── **The initiative's Jira key, typed by a person, or none yet** (BC-21). One box, so no agent can
+      // finish it; the initiative takes its id from the record.
+      "label": "SPOCK: record the Jira key",
+      "type": "shell",
+      "command": "node .github/scripts/task.mjs run-state.mjs jira run:id --key box:jiraKey",
+      "options": {
+        "env": {
+          "SPOCK_TASK": "SPOCK: record the Jira key",
+          "SPOCK_BOX_jiraKey": "${input:jiraKey}"
+        }
+      },
+      "detail": "Records the initiative's Jira key, as Jira shows it on the initiative, as in PROJ-1234. Type none yet if it has no key yet; the initiative then says so, and you run this again when it has one.",
+      "presentation": { "reveal": "always", "panel": "shared", "close": false },
+      "problemMatcher": []
+    },
+    {
+      "label": "SPOCK: keep this run's competitors",
+      "type": "shell",
+      "command": "node .github/scripts/task.mjs promote-competitors.mjs run:id --write --kept-by box:keeper :: store.mjs --write",
+      "options": {
+        "env": {
+          "SPOCK_TASK": "SPOCK: keep this run's competitors",
+          "SPOCK_BOX_keeper": "${input:keeper}"
+        }
+      },
+      "detail": "YOU run this, and an agent cannot: the box is what stops it. For whoever maintains the workflow, not a step in a test run, because it writes under .github/. Copies this run's landscape and competitor-card records into the committed corpus, so later runs can start from what this one found. Nothing else about the run travels. It then regenerates the store, which is what later runs read them from.",
+      "presentation": { "reveal": "always", "panel": "shared", "close": false },
+      "problemMatcher": []
+    },
+    {
+      "label": "SPOCK: what material has been supplied",
+      "type": "shell",
+      "command": "node .github/scripts/task.mjs material.mjs --write",
+      "options": { "env": { "SPOCK_TASK": "SPOCK: what material has been supplied" } },
+      "detail": "Stage 2. Says what arrived and which files still need converting. Makes the run's 2-problems/supplied/ folder where a copied run arrived without it.",
+      "problemMatcher": []
+    },
+    {
+      "label": "SPOCK: convert the documents that were supplied",
+      "type": "shell",
+      "command": "node .github/scripts/task.mjs convert.mjs",
+      "options": { "env": { "SPOCK_TASK": "SPOCK: convert the documents that were supplied" } },
+      "detail": "Stage 2. Word, PowerPoint, Excel and PDF into text beside the original. Nothing installed, nothing replaced; a PDF it cannot read is named with the reason.",
+      "problemMatcher": []
+    },
+    {
+      // **This carried an `${input:runId}` until 2 September 2026 and its detail said the agent had no
+      // task tool.** The Copilot wrapper grants `runTask` and `getTaskOutput`; only another tool's agent file
+      // does not, so the sentence was true of the surface the run was on and wrong about the one this
+      // build ships to. With a box on it the agent could neither run the join nor see whether a person
+      // had, and stage 3 stalled while it read `card-join.mjs` looking for a fault that was not there.
+      // The script resolves the open run itself now, the same way `material.mjs` and `advance.mjs` do.
+      "label": "SPOCK: stage 3 — join the cards, then the store",
+      "type": "shell",
+      "command": "node .github/scripts/task.mjs card-join.mjs --write :: store.mjs --write",
+      "options": { "env": { "SPOCK_TASK": "SPOCK: stage 3 — join the cards, then the store" } },
+      "detail": "Q3 reads both. Takes nothing: the run is the one that is unfinished.",
+      "problemMatcher": []
+    },
+    {
+      "label": "SPOCK: stage 7 — the reading copy",
+      "type": "shell",
+      "command": "node .github/scripts/task.mjs reading-copy.mjs run:dir --write",
+      "options": { "env": { "SPOCK_TASK": "SPOCK: stage 7 — the reading copy" } },
+      "detail": "C96 reads it.",
+      "problemMatcher": []
+    },
+    // ── r1.11 BC-49 ── **A person checks their setup with one task, and edits no file by hand.** It sets the tool from its
+    // one box, changes nothing else, and says line by line what is in place and what to do about anything missing.
+    // **Each platform's form puts a guard before the command**, so a computer with no Node.js is told so in plain words
+    // rather than by the shell, and names its own shell, because the guard is written in that shell's words and a
+    // person's default terminal may be another. Every form ends with the task's own command, which is what C155 reads.
+    // The guard's line is in single quotes: PowerShell's command line drops double quotes before it reads them.
+    {
+      "label": "SPOCK: check my setup",
+      "type": "shell",
+      "command": "node .github/scripts/task.mjs setup-check.mjs --tool box:setupTool",
+      "osx": {
+        "command": "command -v node >/dev/null 2>&1 || { echo 'Node.js is not installed. Install Node.js 22, an LTS version, from nodejs.org, reopen VS Code, and run this task again.'; exit 1; }; node .github/scripts/task.mjs setup-check.mjs --tool box:setupTool",
+        "options": { "shell": { "executable": "/bin/sh", "args": ["-c"] } }
+      },
+      "linux": {
+        "command": "command -v node >/dev/null 2>&1 || { echo 'Node.js is not installed. Install Node.js 22, an LTS version, from nodejs.org, reopen VS Code, and run this task again.'; exit 1; }; node .github/scripts/task.mjs setup-check.mjs --tool box:setupTool",
+        "options": { "shell": { "executable": "/bin/sh", "args": ["-c"] } }
+      },
+      "windows": {
+        "command": "if (-not (Get-Command node -ErrorAction SilentlyContinue)) { Write-Output 'Node.js is not installed. Install Node.js 22, an LTS version, from nodejs.org, reopen VS Code, and run this task again.'; exit 1 }; node .github/scripts/task.mjs setup-check.mjs --tool box:setupTool",
+        "options": { "shell": { "executable": "powershell.exe", "args": ["-Command"] } }
+      },
+      "options": {
+        "env": {
+          "SPOCK_TASK": "SPOCK: check my setup",
+          "SPOCK_BOX_setupTool": "${input:setupTool}"
+        }
+      },
+      "detail": "Checks that this computer has what SPOCK needs and says what to do about anything missing. Sets the tool you pick. Changes nothing else. Run it after setting up, and whenever something seems not to work.",
+      "presentation": { "reveal": "always", "panel": "shared", "close": false },
+      "problemMatcher": []
+    },
+    // ── r1.9 H15 ── **A tester updates through this task, and nobody merges histories.** It moves the copy to the lab's
+    // main whatever that main's history, keeps the runs, both settings and the kept competitors, and refuses, changing
+    // nothing, where files of the workflow were changed on this computer. Its box makes it a person's task: no agent starts
+    // an update.
+    {
+      "label": "SPOCK: update this copy to the latest release",
+      "type": "shell",
+      "command": "node .github/scripts/task.mjs update.mjs --how box:updateHow",
+      "options": {
+        "env": {
+          "SPOCK_TASK": "SPOCK: update this copy to the latest release",
+          "SPOCK_BOX_updateHow": "${input:updateHow}"
+        }
+      },
+      "detail": "YOU run this, once your run is finished and your Copilot chats are closed. Brings this copy to the lab's latest release and keeps your runs, your setting in .github/surface, where your runs are kept and the competitors you kept. Prints the release before and after. Refuses, changing nothing, if files of the workflow were changed on this computer; run it again with the second choice to keep a copy of them and put the release's back. Then reload VS Code.",
+      "presentation": { "reveal": "always", "panel": "shared", "close": false },
+      "problemMatcher": []
+    },
+    {
+      "label": "SPOCK: how the workflow performed",
+      "type": "shell",
+      "command": "node .github/scripts/task.mjs metrics.mjs",
+      "options": { "env": { "SPOCK_TASK": "SPOCK: how the workflow performed" } },
+      "detail": "Read off the run records. Writes nothing.",
+      "problemMatcher": []
+    },
+    // ── Three that were registered as operator commands and had no task ─────────────────────────────
+    //
+    // **The register said a person needs these and the only way to reach them was to type them.** That is
+    // the defect the whole task file exists to remove, sitting inside it, found on 31 August 2026 by the
+    // check that now compares the two registers. `facts.mjs` takes nothing; the other two take what only
+    // a person can supply, so they prompt and no agent can complete them.
+    {
+      "label": "SPOCK: what this build can say about itself",
+      "type": "shell",
+      "command": "node .github/scripts/task.mjs facts.mjs",
+      "options": { "env": { "SPOCK_TASK": "SPOCK: what this build can say about itself" } },
+      "detail": "Every fact this repository states, computed rather than typed, with where each number comes from.",
+      "problemMatcher": []
+    },
+    {
+      "label": "SPOCK: an artifact against its template",
+      "type": "shell",
+      "command": "node .github/scripts/task.mjs template-diff.mjs run:dir",
+      "options": { "env": { "SPOCK_TASK": "SPOCK: an artifact against its template" } },
+      "detail": "What the writer changed from the template, as a diff for the person at the gate.",
+      "problemMatcher": []
+    },
+    {
+      "label": "SPOCK: reduce a raw trace",
+      "type": "shell",
+      "command": "node .github/scripts/task.mjs trace.mjs --in box:traceFile --run run:dir --write",
+      "options": {
+        "env": {
+          "SPOCK_TASK": "SPOCK: reduce a raw trace",
+          "SPOCK_BOX_traceFile": "${input:traceFile}"
+        }
+      },
+      "detail": "The raw file is customer material from its first line. Only the declared set is retained.",
+      "presentation": { "reveal": "always", "panel": "shared", "close": false },
+      "problemMatcher": []
+    }
+  ]
+}
